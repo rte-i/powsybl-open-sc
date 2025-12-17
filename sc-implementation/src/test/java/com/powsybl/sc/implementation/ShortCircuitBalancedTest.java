@@ -108,8 +108,8 @@ public class ShortCircuitBalancedTest {
         MagnitudeFaultResult m0 = (MagnitudeFaultResult) frs.get(0);
         MagnitudeFaultResult m1 = (MagnitudeFaultResult) frs.get(1);
 
-        assertEquals(2.68267577453832, m1.getCurrent(), 0.00001); // expressed in kA and not A
-        assertEquals(2.945047378902121, m0.getCurrent(), 0.00001);
+        assertEquals(2.9509433519921533, m1.getCurrent(), 0.00001); // expressed in kA and not A
+        assertEquals(3.2395521167923333, m0.getCurrent(), 0.00001);
         assertEquals("OpenShortCircuit", providerName);
         assertEquals("0.1", providerVersion);
 
@@ -151,10 +151,10 @@ public class ShortCircuitBalancedTest {
         MagnitudeFaultResult m2 = (MagnitudeFaultResult) frs.get(2);
         MagnitudeFaultResult m3 = (MagnitudeFaultResult) frs.get(3);
 
-        assertEquals(3.5471650598424766, m0.getCurrent(), 0.00001);
-        assertEquals(3.7476107037718006, m1.getCurrent(), 0.00001);
-        assertEquals(3.5923793102301785, m2.getCurrent(), 0.00001);
-        assertEquals(3.411642741114655, m3.getCurrent(), 0.00001);
+        assertEquals(3.9018815658267245, m0.getCurrent(), 0.00001);
+        assertEquals(4.122371774148982, m1.getCurrent(), 0.00001);
+        assertEquals(3.9516172412531967, m2.getCurrent(), 0.00001);
+        assertEquals(3.75280701522612, m3.getCurrent(), 0.00001);
 
     }
 
@@ -187,8 +187,8 @@ public class ShortCircuitBalancedTest {
         MagnitudeFaultResult m0 = (MagnitudeFaultResult) frs.get(0);
         MagnitudeFaultResult m1 = (MagnitudeFaultResult) frs.get(1);
 
-        assertEquals(1.881491000035193, m1.getCurrent(), 0.00001);
-        assertEquals(2.945050248502227, m0.getCurrent(), 0.00001);
+        assertEquals(2.069640100038712, m1.getCurrent(), 0.00001);
+        assertEquals(3.2395552733524493, m0.getCurrent(), 0.00001);
 
     }
 
@@ -744,4 +744,3 @@ public class ShortCircuitBalancedTest {
         return network;
     }
 }
-

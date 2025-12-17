@@ -19,6 +19,7 @@ import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.math.matrix.SparseMatrixFactory;
 import com.powsybl.openloadflow.OpenLoadFlowProvider;
 import com.powsybl.openloadflow.network.LfBus;
+import com.powsybl.sc.extensions.ShortCircuitStudyOptionsExtension;
 import com.powsybl.sc.util.FeedersAtBusResult;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.shortcircuit.*;
@@ -78,18 +79,21 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         boolean existBalancedFaults = faultTypes.getKey();
         boolean existUnbalancedFaults = faultTypes.getValue();
 
-        //Parameters that could be added in the short circuit provider API later:
-        // Voltage Profile
-        ShortCircuitEngineParameters.VoltageProfileType voltageProfile = ShortCircuitEngineParameters.VoltageProfileType.NOMINAL;
+        ShortCircuitStudyOptionsExtension studyOptions = network.getExtension(ShortCircuitStudyOptionsExtension.class);
+        ShortCircuitStudyOptionsExtension.Norm norm = studyOptions != null ? studyOptions.getNorm() : ShortCircuitStudyOptionsExtension.Norm.IEC_60909;
+        ShortCircuitStudyOptionsExtension.Period period = studyOptions != null ? studyOptions.getPeriod() : ShortCircuitStudyOptionsExtension.Period.SUB_TRANSIENT;
+        ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfileType = studyOptions != null ? studyOptions.getVoltageProfile() : ShortCircuitStudyOptionsExtension.VoltageProfile.NOMINAL;
+
+        ShortCircuitEngineParameters.VoltageProfileType voltageProfile = toVoltageProfileType(voltageProfileType);
 
         // Selective or Systematic short circuit analysis
         ShortCircuitEngineParameters.AnalysisType at = ShortCircuitEngineParameters.AnalysisType.SELECTIVE;
 
         // selection of the period of analysis
-        ShortCircuitEngineParameters.PeriodType periodType = ShortCircuitEngineParameters.PeriodType.SUB_TRANSIENT;
+        ShortCircuitEngineParameters.PeriodType periodType = toPeriodType(period);
 
         LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-        ShortCircuitNorm shortCircuitNorm = new ShortCircuitNormNone();
+        ShortCircuitNorm shortCircuitNorm = createShortCircuitNorm(norm);
 
         ShortCircuitEngineParameters scbParameters = new ShortCircuitEngineParameters(loadFlowParameters, matrixFactory, at, faultsList, true, voltageProfile, false, periodType, shortCircuitNorm);
 
@@ -106,7 +110,10 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
 
         LOGGER.info("Short circuit calculation done in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
-        return CompletableFuture.completedFuture(new ShortCircuitAnalysisResult(faultResults));
+        ShortCircuitAnalysisResult analysisResult = new ShortCircuitAnalysisResult(faultResults);
+        analysisResult.addExtension(ShortCircuitStudyReport.class, new ShortCircuitStudyReport(analysisResult, norm, period, voltageProfileType));
+
+        return CompletableFuture.completedFuture(analysisResult);
     }
 
     public void runUnbalancedAnalysis(Network network, ShortCircuitEngineParameters scbParameters, Map<ShortCircuitFault, Fault> scFaultToFault, List<FaultResult> faultResults) {
@@ -215,5 +222,27 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
 
         }
         return new Pair<>(existBalancedFaults, existUnbalancedFaults);
+    }
+
+    private ShortCircuitEngineParameters.VoltageProfileType toVoltageProfileType(ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfile) {
+        return switch (voltageProfile) {
+            case CALCULATED -> ShortCircuitEngineParameters.VoltageProfileType.CALCULATED;
+            case NOMINAL -> ShortCircuitEngineParameters.VoltageProfileType.NOMINAL;
+        };
+    }
+
+    private ShortCircuitEngineParameters.PeriodType toPeriodType(ShortCircuitStudyOptionsExtension.Period period) {
+        return switch (period) {
+            case SUB_TRANSIENT -> ShortCircuitEngineParameters.PeriodType.SUB_TRANSIENT;
+            case TRANSIENT -> ShortCircuitEngineParameters.PeriodType.TRANSIENT;
+            case STEADY_STATE -> ShortCircuitEngineParameters.PeriodType.STEADY_STATE;
+        };
+    }
+
+    private ShortCircuitNorm createShortCircuitNorm(ShortCircuitStudyOptionsExtension.Norm norm) {
+        return switch (norm) {
+            case IEC_60909 -> new ShortCircuitNormIec();
+            case NONE -> new ShortCircuitNormNone();
+        };
     }
 }
