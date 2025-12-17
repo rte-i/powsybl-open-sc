@@ -11,6 +11,8 @@ import com.powsybl.commons.extensions.AbstractExtension;
 import com.powsybl.sc.extensions.ShortCircuitStudyOptionsExtension;
 import com.powsybl.shortcircuit.ShortCircuitAnalysisResult;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -23,13 +25,16 @@ public class ShortCircuitStudyReport extends AbstractExtension<ShortCircuitAnaly
     private final ShortCircuitStudyOptionsExtension.Norm norm;
     private final ShortCircuitStudyOptionsExtension.Period period;
     private final ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfile;
+    private final List<String> diagnostics;
 
     public ShortCircuitStudyReport(ShortCircuitAnalysisResult shortCircuitAnalysisResult, ShortCircuitStudyOptionsExtension.Norm norm,
-                                   ShortCircuitStudyOptionsExtension.Period period, ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfile) {
+                                   ShortCircuitStudyOptionsExtension.Period period, ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfile,
+                                   List<String> diagnostics) {
         super(shortCircuitAnalysisResult);
         this.norm = Objects.requireNonNull(norm);
         this.period = Objects.requireNonNull(period);
         this.voltageProfile = Objects.requireNonNull(voltageProfile);
+        this.diagnostics = diagnostics != null ? List.copyOf(diagnostics) : Collections.emptyList();
     }
 
     @Override
@@ -47,5 +52,9 @@ public class ShortCircuitStudyReport extends AbstractExtension<ShortCircuitAnaly
 
     public ShortCircuitStudyOptionsExtension.VoltageProfile getVoltageProfile() {
         return voltageProfile;
+    }
+
+    public List<String> getDiagnostics() {
+        return diagnostics;
     }
 }

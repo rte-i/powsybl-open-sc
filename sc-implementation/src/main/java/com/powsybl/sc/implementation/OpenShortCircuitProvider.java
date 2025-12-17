@@ -22,7 +22,6 @@ import com.powsybl.sc.extensions.ShortCircuitStudyOptionsExtension;
 import com.powsybl.sc.util.FeedersAtBusResult;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.shortcircuit.*;
-import org.apache.commons.math3.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,10 +67,9 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         // building of fault lists
         List<ShortCircuitFault> faultsList = new ArrayList<>();
         Map<ShortCircuitFault, Fault> scFaultToFault = new HashMap<>(); // for now we use this map to get the correspondence between short circuit provider and internal modelling of fault
-
-        Pair<Boolean, Boolean> faultTypes = buildFaultLists(network, faults, faultsList, scFaultToFault);
-        boolean existBalancedFaults = faultTypes.getKey();
-        boolean existUnbalancedFaults = faultTypes.getValue();
+        List<FaultProcessingResult> faultProcessingResults = processFaults(network, faults, faultsList, scFaultToFault);
+        boolean existBalancedFaults = faultsList.stream().anyMatch(scFault -> scFault.getType() == ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND);
+        boolean existUnbalancedFaults = faultsList.stream().anyMatch(scFault -> scFault.getType() != ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND);
 
         ShortCircuitStudyOptionsExtension studyOptions = network.getExtension(ShortCircuitStudyOptionsExtension.class);
         ShortCircuitStudyOptionsExtension.Norm norm = studyOptions != null ? studyOptions.getNorm() : ShortCircuitStudyOptionsExtension.Norm.IEC_60909;
@@ -108,10 +106,16 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
             runUnbalancedAnalysis(network, scbParameters, scFaultToFault, faultResults);
         }
 
+        addFailureResults(faultResults, faultProcessingResults);
+
         LOGGER.info("Short circuit calculation done in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
         ShortCircuitAnalysisResult analysisResult = new ShortCircuitAnalysisResult(faultResults);
-        analysisResult.addExtension(ShortCircuitStudyReport.class, new ShortCircuitStudyReport(analysisResult, norm, period, voltageProfileType));
+        List<String> diagnostics = faultProcessingResults.stream()
+                .filter(FaultProcessingResult::isFailure)
+                .map(FaultProcessingResult::getDiagnostics)
+                .toList();
+        analysisResult.addExtension(ShortCircuitStudyReport.class, new ShortCircuitStudyReport(analysisResult, norm, period, voltageProfileType, diagnostics));
 
         return CompletableFuture.completedFuture(analysisResult);
     }
@@ -184,48 +188,60 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
 
     }
 
-    public Pair<Boolean, Boolean> buildFaultLists(Network network, List<Fault> faults, List<ShortCircuitFault> balancedFaultsList, Map<ShortCircuitFault, Fault> scFaultToFault) {
-        boolean existBalancedFaults = false;
-        boolean existUnbalancedFaults = false;
-
+    private List<FaultProcessingResult> processFaults(Network network, List<Fault> faults, List<ShortCircuitFault> balancedFaultsList, Map<ShortCircuitFault, Fault> scFaultToFault) {
+        List<FaultProcessingResult> faultProcessingResults = new ArrayList<>();
         for (Fault fault : faults) {
-            ShortCircuitFault.ShortCircuitType scType = ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND; // Default type
-            if (fault.getType() == Fault.Type.BRANCH) {
-                LOGGER.warn("Short circuit of type BRANCH not yet supported, fault: {} is ignored", fault.getId());
-                continue;
-            }
-
-            if (fault.getFaultType() == Fault.FaultType.SINGLE_PHASE) {
-                existUnbalancedFaults = true;
-                scType = ShortCircuitFault.ShortCircuitType.MONOPHASED;
-            } else if (fault.getFaultType() == Fault.FaultType.THREE_PHASE) {
-                existBalancedFaults = true;
+            FaultProcessingResult result = toShortCircuitFault(network, fault);
+            faultProcessingResults.add(result);
+            if (result.isReady()) {
+                ShortCircuitFault sc = result.getShortCircuitFault();
+                balancedFaultsList.add(sc);
+                scFaultToFault.put(sc, fault);
             } else {
-                LOGGER.warn("Short circuit of unknown type, fault: {} is ignored", fault.getId());
-                continue;
+                LOGGER.warn(result.getDiagnostics());
             }
-
-            // TODO : transform parallel input into a series input
-            if (fault.getConnectionType() == Fault.ConnectionType.PARALLEL) {
-                LOGGER.warn("Short circuit connection of type PARALLEL not yet supported, fault: {} is ignored", fault.getId());
-                continue;
-            }
-
-            // TODO : see how to get lfBus from iidm Bus
-            String elementId = fault.getElementId();
-
-            double rFault = fault.getRToGround();
-            double xFault = fault.getXToGround();
-            Bus bus = network.getBusBreakerView().getBus(elementId);
-            String busId = bus.getId();
-            ShortCircuitFault sc = new ShortCircuitFault(busId, busId, rFault, xFault, scType);
-            balancedFaultsList.add(sc);
-
-            // TODO improve:
-            scFaultToFault.put(sc, fault);
-
         }
-        return new Pair<>(existBalancedFaults, existUnbalancedFaults);
+        return faultProcessingResults;
+    }
+
+    private FaultProcessingResult toShortCircuitFault(Network network, Fault fault) {
+        if (fault.getType() == Fault.Type.BRANCH) {
+            return FaultProcessingResult.failure(fault, String.format("Short circuit of type BRANCH not yet supported, fault: %s is ignored", fault.getId()));
+        }
+        if (fault.getConnectionType() == Fault.ConnectionType.PARALLEL) {
+            return FaultProcessingResult.failure(fault, String.format("Short circuit connection of type PARALLEL not yet supported, fault: %s is ignored", fault.getId()));
+        }
+
+        ShortCircuitFault.ShortCircuitType scType;
+        if (fault.getFaultType() == Fault.FaultType.SINGLE_PHASE) {
+            scType = ShortCircuitFault.ShortCircuitType.MONOPHASED;
+        } else if (fault.getFaultType() == Fault.FaultType.THREE_PHASE) {
+            scType = ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND;
+        } else {
+            return FaultProcessingResult.failure(fault, String.format("Short circuit of unknown type, fault: %s is ignored", fault.getId()));
+        }
+
+        String elementId = fault.getElementId();
+        Bus bus = network.getBusBreakerView().getBus(elementId);
+        if (bus == null) {
+            return FaultProcessingResult.failure(fault, String.format("Short circuit element '%s' not found, fault: %s is ignored", elementId, fault.getId()));
+        }
+        double rFault = fault.getRToGround();
+        double xFault = fault.getXToGround();
+        ShortCircuitFault sc = new ShortCircuitFault(bus.getId(), bus.getId(), rFault, xFault, scType);
+        return FaultProcessingResult.ready(fault, sc);
+    }
+
+    private void addFailureResults(List<FaultResult> faultResults, List<FaultProcessingResult> processingResults) {
+        for (FaultProcessingResult processingResult : processingResults) {
+            if (processingResult.getStatus() == FaultProcessingResult.Status.FAILURE) {
+                MagnitudeFaultResult failureResult = new MagnitudeFaultResult(processingResult.getFault(), FaultResult.Status.FAILURE);
+                if (processingResult.getDiagnostics() != null) {
+                    failureResult.addExtension(FaultProcessingDiagnostic.class, new FaultProcessingDiagnostic(failureResult, processingResult.getDiagnostics()));
+                }
+                faultResults.add(failureResult);
+            }
+        }
     }
 
     private ShortCircuitEngineParameters.VoltageProfileType toVoltageProfileType(ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfile) {
@@ -248,5 +264,56 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
             case IEC_60909 -> new ShortCircuitNormIec();
             case NONE -> new ShortCircuitNormNone();
         };
+    }
+
+    private static final class FaultProcessingResult {
+        enum Status {
+            READY,
+            FAILURE
+        }
+
+        private final Fault fault;
+        private final ShortCircuitFault shortCircuitFault;
+        private final Status status;
+        private final String diagnostics;
+
+        private FaultProcessingResult(Fault fault, ShortCircuitFault shortCircuitFault, Status status, String diagnostics) {
+            this.fault = Objects.requireNonNull(fault);
+            this.shortCircuitFault = shortCircuitFault;
+            this.status = Objects.requireNonNull(status);
+            this.diagnostics = diagnostics;
+        }
+
+        static FaultProcessingResult ready(Fault fault, ShortCircuitFault shortCircuitFault) {
+            return new FaultProcessingResult(fault, Objects.requireNonNull(shortCircuitFault), Status.READY, null);
+        }
+
+        static FaultProcessingResult failure(Fault fault, String diagnostics) {
+            return new FaultProcessingResult(fault, null, Status.FAILURE, Objects.requireNonNull(diagnostics));
+        }
+
+        Fault getFault() {
+            return fault;
+        }
+
+        ShortCircuitFault getShortCircuitFault() {
+            return shortCircuitFault;
+        }
+
+        Status getStatus() {
+            return status;
+        }
+
+        String getDiagnostics() {
+            return diagnostics;
+        }
+
+        boolean isReady() {
+            return status == Status.READY;
+        }
+
+        boolean isFailure() {
+            return status == Status.FAILURE;
+        }
     }
 }

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Jean-Baptiste Heyberger <jbheyberger at gmail.com>
@@ -156,6 +156,34 @@ public class ShortCircuitBalancedTest {
         assertEquals(3.9516172412531967, m2.getCurrent(), 0.00001);
         assertEquals(3.75280701522612, m3.getCurrent(), 0.00001);
 
+    }
+
+    @Test
+    void unsupportedFaultProducesFailureResult() {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        loadFlowParameters.setTwtSplitShuntAdmittance(true);
+        Network nt2 = create2n(NetworkFactory.findDefault());
+        LoadFlow.run(nt2, loadFlowParameters);
+
+        ShortCircuitAnalysisProvider provider = new OpenShortCircuitProvider(new DenseMatrixFactory());
+        ComputationManager cm = LocalComputationManager.getDefault();
+        ShortCircuitParameters scp = new ShortCircuitParameters();
+
+        Fault invalidFault = new BusFault("F-invalid", "B1", 0.0, 0.0, Fault.ConnectionType.PARALLEL, Fault.FaultType.THREE_PHASE);
+        ShortCircuitAnalysisResult result = provider.run(nt2, Collections.singletonList(invalidFault), scp, cm, Collections.emptyList()).join();
+
+        assertEquals(1, result.getFaultResults().size());
+        FaultResult faultResult = result.getFaultResults().get(0);
+        assertEquals(FaultResult.Status.FAILURE, faultResult.getStatus());
+
+        FaultProcessingDiagnostic diagnostic = faultResult.getExtension(FaultProcessingDiagnostic.class);
+        assertNotNull(diagnostic);
+        assertTrue(diagnostic.getMessage().contains("PARALLEL"));
+
+        ShortCircuitStudyReport report = result.getExtension(ShortCircuitStudyReport.class);
+        assertNotNull(report);
+        assertEquals(1, report.getDiagnostics().size());
+        assertTrue(report.getDiagnostics().get(0).contains("PARALLEL"));
     }
 
     @Test

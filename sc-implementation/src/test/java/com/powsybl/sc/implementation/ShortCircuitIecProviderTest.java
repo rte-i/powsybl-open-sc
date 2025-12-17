@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at gmail.com>
@@ -48,6 +49,7 @@ class ShortCircuitIecProviderTest {
         assertEquals(ShortCircuitStudyOptionsExtension.Norm.IEC_60909, report.getNorm());
         assertEquals(ShortCircuitStudyOptionsExtension.Period.SUB_TRANSIENT, report.getPeriod());
         assertEquals(ShortCircuitStudyOptionsExtension.VoltageProfile.NOMINAL, report.getVoltageProfile());
+        assertTrue(report.getDiagnostics().isEmpty());
     }
 
     @Test
@@ -71,5 +73,6 @@ class ShortCircuitIecProviderTest {
         assertEquals(ShortCircuitStudyOptionsExtension.Norm.NONE, report.getNorm());
         assertEquals(ShortCircuitStudyOptionsExtension.Period.TRANSIENT, report.getPeriod());
         assertEquals(ShortCircuitStudyOptionsExtension.VoltageProfile.CALCULATED, report.getVoltageProfile());
+        assertTrue(report.getDiagnostics().isEmpty());
     }
 }
