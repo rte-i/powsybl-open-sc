@@ -10,6 +10,8 @@ package com.powsybl.sc.implementation;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.math.matrix.MatrixFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -50,6 +52,8 @@ public class ShortCircuitEngineParameters {
     private PeriodType periodType;
 
     private ShortCircuitNorm norm;
+
+    private final List<BranchFaultContext> branchFaultContexts = new ArrayList<>();
 
     public ShortCircuitEngineParameters(LoadFlowParameters loadFlowParameters, MatrixFactory matrixFactory, AnalysisType analysisType, List<ShortCircuitFault> faults, boolean isVoltageExport, VoltageProfileType vProfile, boolean ignoreShunts, PeriodType periodType, ShortCircuitNorm norm) {
         this.loadFlowParameters = Objects.requireNonNull(loadFlowParameters);
@@ -105,5 +109,13 @@ public class ShortCircuitEngineParameters {
 
     public void setVoltageUpdate(boolean bool) {
         voltageUpdate = bool;
+    }
+
+    public void addBranchFaultContext(BranchFaultContext context) {
+        branchFaultContexts.add(Objects.requireNonNull(context));
+    }
+
+    public List<BranchFaultContext> getBranchFaultContexts() {
+        return Collections.unmodifiableList(branchFaultContexts);
     }
 }

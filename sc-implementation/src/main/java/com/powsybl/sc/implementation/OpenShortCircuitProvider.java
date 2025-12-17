@@ -18,6 +18,7 @@ import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.math.matrix.SparseMatrixFactory;
 import com.powsybl.openloadflow.OpenLoadFlowProvider;
 import com.powsybl.openloadflow.network.LfBus;
+import com.powsybl.sc.extensions.ShortCircuitFaultSpecExtension;
 import com.powsybl.sc.extensions.ShortCircuitStudyOptionsExtension;
 import com.powsybl.sc.util.FeedersAtBusResult;
 import com.powsybl.security.LimitViolation;
@@ -67,9 +68,6 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         // building of fault lists
         List<ShortCircuitFault> faultsList = new ArrayList<>();
         Map<ShortCircuitFault, Fault> scFaultToFault = new HashMap<>(); // for now we use this map to get the correspondence between short circuit provider and internal modelling of fault
-        List<FaultProcessingResult> faultProcessingResults = processFaults(network, faults, faultsList, scFaultToFault);
-        boolean existBalancedFaults = faultsList.stream().anyMatch(scFault -> scFault.getType() == ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND);
-        boolean existUnbalancedFaults = faultsList.stream().anyMatch(scFault -> scFault.getType() != ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND);
 
         ShortCircuitStudyOptionsExtension studyOptions = network.getExtension(ShortCircuitStudyOptionsExtension.class);
         ShortCircuitStudyOptionsExtension.Norm norm = studyOptions != null ? studyOptions.getNorm() : ShortCircuitStudyOptionsExtension.Norm.IEC_60909;
@@ -94,6 +92,13 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         ShortCircuitNorm shortCircuitNorm = createShortCircuitNorm(norm);
 
         ShortCircuitEngineParameters scbParameters = new ShortCircuitEngineParameters(loadFlowParameters, matrixFactory, at, faultsList, useCalculatedVoltageProfile, voltageProfile, false, periodType, shortCircuitNorm);
+
+        ShortCircuitFaultSpecExtension faultSpecExtension = network.getExtension(ShortCircuitFaultSpecExtension.class);
+        BranchFaultSpecificationResolver branchFaultSpecificationResolver = new BranchFaultSpecificationResolver(faultSpecExtension);
+        List<FaultProcessingResult> faultProcessingResults = processFaults(network, faults, faultsList, scFaultToFault,
+                branchFaultSpecificationResolver, scbParameters);
+        boolean existBalancedFaults = faultsList.stream().anyMatch(scFault -> scFault.getType() == ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND);
+        boolean existUnbalancedFaults = faultsList.stream().anyMatch(scFault -> scFault.getType() != ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND);
 
         // lists to store the results
         List<FaultResult> faultResults = new ArrayList<>();
@@ -188,10 +193,13 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
 
     }
 
-    private List<FaultProcessingResult> processFaults(Network network, List<Fault> faults, List<ShortCircuitFault> balancedFaultsList, Map<ShortCircuitFault, Fault> scFaultToFault) {
+    private List<FaultProcessingResult> processFaults(Network network, List<Fault> faults, List<ShortCircuitFault> balancedFaultsList,
+                                                      Map<ShortCircuitFault, Fault> scFaultToFault,
+                                                      BranchFaultSpecificationResolver branchFaultSpecificationResolver,
+                                                      ShortCircuitEngineParameters engineParameters) {
         List<FaultProcessingResult> faultProcessingResults = new ArrayList<>();
         for (Fault fault : faults) {
-            FaultProcessingResult result = toShortCircuitFault(network, fault);
+            FaultProcessingResult result = toShortCircuitFault(network, fault, branchFaultSpecificationResolver, engineParameters);
             faultProcessingResults.add(result);
             if (result.isReady()) {
                 ShortCircuitFault sc = result.getShortCircuitFault();
@@ -204,9 +212,17 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         return faultProcessingResults;
     }
 
-    private FaultProcessingResult toShortCircuitFault(Network network, Fault fault) {
+    private FaultProcessingResult toShortCircuitFault(Network network, Fault fault,
+                                                     BranchFaultSpecificationResolver branchFaultSpecificationResolver,
+                                                     ShortCircuitEngineParameters engineParameters) {
         if (fault.getType() == Fault.Type.BRANCH) {
-            return FaultProcessingResult.failure(fault, String.format("Short circuit of type BRANCH not yet supported, fault: %s is ignored", fault.getId()));
+            BranchFaultSpecificationResolver.Resolution resolution = branchFaultSpecificationResolver.resolve(fault, network);
+            if (resolution.getStatus() == BranchFaultSpecificationResolver.Resolution.Status.FAILURE) {
+                return FaultProcessingResult.failure(fault, resolution.buildDiagnosticsMessage("Branch fault ignored"));
+            }
+            engineParameters.addBranchFaultContext(new BranchFaultContext(fault.getId(), resolution.getBranchId(),
+                    resolution.getPositionAlpha(), resolution.getReferenceSide()));
+            return FaultProcessingResult.failure(fault, resolution.buildDiagnosticsMessage("Branch faults are not yet supported"));
         }
         if (fault.getConnectionType() == Fault.ConnectionType.PARALLEL) {
             return FaultProcessingResult.failure(fault, String.format("Short circuit connection of type PARALLEL not yet supported, fault: %s is ignored", fault.getId()));
