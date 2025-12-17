@@ -14,7 +14,6 @@ import com.powsybl.iidm.network.Bus;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlow;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.math.matrix.SparseMatrixFactory;
 import com.powsybl.openloadflow.OpenLoadFlowProvider;
@@ -66,11 +65,6 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         Objects.requireNonNull(parameters);
         Stopwatch stopwatch = Stopwatch.createStarted();
 
-        LoadFlowParameters lfParameters = new LoadFlowParameters();
-        LoadFlow.Runner loadFlowRunner = new LoadFlow.Runner(new OpenLoadFlowProvider(matrixFactory));
-
-        LoadFlowResult lfResult = loadFlowRunner.run(network, lfParameters);
-
         // building of fault lists
         List<ShortCircuitFault> faultsList = new ArrayList<>();
         Map<ShortCircuitFault, Fault> scFaultToFault = new HashMap<>(); // for now we use this map to get the correspondence between short circuit provider and internal modelling of fault
@@ -83,6 +77,13 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         ShortCircuitStudyOptionsExtension.Norm norm = studyOptions != null ? studyOptions.getNorm() : ShortCircuitStudyOptionsExtension.Norm.IEC_60909;
         ShortCircuitStudyOptionsExtension.Period period = studyOptions != null ? studyOptions.getPeriod() : ShortCircuitStudyOptionsExtension.Period.SUB_TRANSIENT;
         ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfileType = studyOptions != null ? studyOptions.getVoltageProfile() : ShortCircuitStudyOptionsExtension.VoltageProfile.NOMINAL;
+        boolean useCalculatedVoltageProfile = voltageProfileType == ShortCircuitStudyOptionsExtension.VoltageProfile.CALCULATED;
+
+        LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
+        if (useCalculatedVoltageProfile) {
+            LoadFlow.Runner loadFlowRunner = new LoadFlow.Runner(new OpenLoadFlowProvider(matrixFactory));
+            loadFlowRunner.run(network, loadFlowParameters);
+        }
 
         ShortCircuitEngineParameters.VoltageProfileType voltageProfile = toVoltageProfileType(voltageProfileType);
 
@@ -92,10 +93,9 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         // selection of the period of analysis
         ShortCircuitEngineParameters.PeriodType periodType = toPeriodType(period);
 
-        LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
         ShortCircuitNorm shortCircuitNorm = createShortCircuitNorm(norm);
 
-        ShortCircuitEngineParameters scbParameters = new ShortCircuitEngineParameters(loadFlowParameters, matrixFactory, at, faultsList, true, voltageProfile, false, periodType, shortCircuitNorm);
+        ShortCircuitEngineParameters scbParameters = new ShortCircuitEngineParameters(loadFlowParameters, matrixFactory, at, faultsList, useCalculatedVoltageProfile, voltageProfile, false, periodType, shortCircuitNorm);
 
         // lists to store the results
         List<FaultResult> faultResults = new ArrayList<>();
@@ -162,7 +162,11 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
     }
 
     public void fillFeederResults(List<FeederResult> feederResultsProvider, ShortCircuitResult scResult) {
-        for (Map.Entry<LfBus, FeedersAtBusResult> busAndFeedersAtBusResult : scResult.getFeedersAtBusResultsDirect().entrySet()) {
+        Map<LfBus, FeedersAtBusResult> feedersAtBusResults = scResult.getFeedersAtBusResultsDirect();
+        if (feedersAtBusResults == null || feedersAtBusResults.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<LfBus, FeedersAtBusResult> busAndFeedersAtBusResult : feedersAtBusResults.entrySet()) {
             LfBus lfBus = busAndFeedersAtBusResult.getKey();
             FeedersAtBusResult feedersAtBusResult = busAndFeedersAtBusResult.getValue();
             for (com.powsybl.sc.util.FeederResult feederResult : feedersAtBusResult.getBusFeedersResult()) {
