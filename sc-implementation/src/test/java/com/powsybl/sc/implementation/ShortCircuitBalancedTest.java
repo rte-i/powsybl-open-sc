@@ -18,6 +18,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.math.matrix.DenseMatrixFactory;
 import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.openloadflow.OpenLoadFlowProvider;
+import com.powsybl.sc.extensions.ShortCircuitFaultSpecExtensionAdder;
 import com.powsybl.sc.util.ReferenceNetwork;
 import com.powsybl.sc.util.extensions.ThreeWindingsTransformerNorm;
 import com.powsybl.shortcircuit.*;
@@ -184,6 +185,50 @@ public class ShortCircuitBalancedTest {
         assertNotNull(report);
         assertEquals(1, report.getDiagnostics().size());
         assertTrue(report.getDiagnostics().get(0).contains("PARALLEL"));
+    }
+
+    @Test
+    void branchFaultMatchesTerminalBusFaults() {
+        double busB1 = 3.2395521167923333;
+        double busB2 = 2.9509433519921533;
+
+        double branchFrom = runBalancedBranchFault(0.0);
+        double branchTo = runBalancedBranchFault(1.0);
+        double midCurrent = runBalancedBranchFault(0.5);
+
+        assertEquals(busB1, branchFrom, 1e-6);
+        assertEquals(busB2, branchTo, 1e-6);
+        assertTrue(midCurrent < busB1);
+        assertTrue(midCurrent > busB2);
+    }
+
+    @Test
+    void branchFaultOnTransformerProducesFailure() {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        loadFlowParameters.setTwtSplitShuntAdmittance(true);
+        Network network = ReferenceNetwork.createShortCircuitReference();
+        LoadFlow.run(network, loadFlowParameters);
+
+        ShortCircuitAnalysisProvider provider = new OpenShortCircuitProvider(new DenseMatrixFactory());
+        ComputationManager cm = LocalComputationManager.getDefault();
+        ShortCircuitParameters scParameters = new ShortCircuitParameters();
+
+        Fault transformerBranchFault = new BranchFault("BF_TFO", "T1", 0.5);
+        ShortCircuitAnalysisResult result = provider.run(network, Collections.singletonList(transformerBranchFault),
+                scParameters, cm, Collections.emptyList()).join();
+
+        assertEquals(1, result.getFaultResults().size());
+        FaultResult faultResult = result.getFaultResults().get(0);
+        assertEquals(FaultResult.Status.FAILURE, faultResult.getStatus());
+
+        FaultProcessingDiagnostic diagnostic = faultResult.getExtension(FaultProcessingDiagnostic.class);
+        assertNotNull(diagnostic);
+        assertTrue(diagnostic.getMessage().contains("transformer"));
+
+        ShortCircuitStudyReport report = result.getExtension(ShortCircuitStudyReport.class);
+        assertNotNull(report);
+        assertEquals(1, report.getDiagnostics().size());
+        assertTrue(report.getDiagnostics().get(0).contains("transformer"));
     }
 
     @Test
@@ -489,6 +534,34 @@ public class ShortCircuitBalancedTest {
                 .add();
 
         return network;
+    }
+
+    private double runBalancedBranchFault(double alpha) {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        loadFlowParameters.setTwtSplitShuntAdmittance(true);
+        Network network = create2n(NetworkFactory.findDefault());
+        LoadFlow.run(network, loadFlowParameters);
+
+        network.newExtension(ShortCircuitFaultSpecExtensionAdder.class)
+                .withBranchFault("BF_BRANCH", "B1_B2", alpha)
+                .add();
+
+        ShortCircuitAnalysisProvider provider = new OpenShortCircuitProvider(new DenseMatrixFactory());
+        ComputationManager computationManager = LocalComputationManager.getDefault();
+        ShortCircuitParameters scParameters = new ShortCircuitParameters();
+
+        Fault branchFault = new BranchFault("BF_BRANCH", "B1_B2", alpha);
+        ShortCircuitAnalysisResult result = provider.run(network, Collections.singletonList(branchFault),
+                scParameters, computationManager, Collections.emptyList()).join();
+
+        List<FaultResult> faultResults = result.getFaultResults();
+        ShortCircuitStudyReport report = result.getExtension(ShortCircuitStudyReport.class);
+        assertEquals(1, faultResults.size(), () -> "Fault count mismatch. Diagnostics: "
+                + (report == null ? "none" : report.getDiagnostics()));
+        FaultResult faultResult = faultResults.get(0);
+        assertEquals(FaultResult.Status.SUCCESS, faultResult.getStatus());
+
+        return ((MagnitudeFaultResult) faultResult).getCurrent();
     }
 
     public static Network create4n(NetworkFactory networkFactory) {

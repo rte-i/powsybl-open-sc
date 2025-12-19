@@ -215,15 +215,6 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
     private FaultProcessingResult toShortCircuitFault(Network network, Fault fault,
                                                      BranchFaultSpecificationResolver branchFaultSpecificationResolver,
                                                      ShortCircuitEngineParameters engineParameters) {
-        if (fault.getType() == Fault.Type.BRANCH) {
-            BranchFaultSpecificationResolver.Resolution resolution = branchFaultSpecificationResolver.resolve(fault, network);
-            if (resolution.getStatus() == BranchFaultSpecificationResolver.Resolution.Status.FAILURE) {
-                return FaultProcessingResult.failure(fault, resolution.buildDiagnosticsMessage("Branch fault ignored"));
-            }
-            engineParameters.addBranchFaultContext(new BranchFaultContext(fault.getId(), resolution.getBranchId(),
-                    resolution.getPositionAlpha(), resolution.getReferenceSide()));
-            return FaultProcessingResult.failure(fault, resolution.buildDiagnosticsMessage("Branch faults are not yet supported"));
-        }
         if (fault.getConnectionType() == Fault.ConnectionType.PARALLEL) {
             return FaultProcessingResult.failure(fault, String.format("Short circuit connection of type PARALLEL not yet supported, fault: %s is ignored", fault.getId()));
         }
@@ -237,13 +228,25 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
             return FaultProcessingResult.failure(fault, String.format("Short circuit of unknown type, fault: %s is ignored", fault.getId()));
         }
 
+        double rFault = fault.getRToGround();
+        double xFault = fault.getXToGround();
+
+        if (fault.getType() == Fault.Type.BRANCH) {
+            BranchFaultSpecificationResolver.Resolution resolution = branchFaultSpecificationResolver.resolve(fault, network);
+            if (resolution.getStatus() == BranchFaultSpecificationResolver.Resolution.Status.FAILURE) {
+                return FaultProcessingResult.failure(fault, resolution.buildDiagnosticsMessage("Branch fault ignored"));
+            }
+            engineParameters.addBranchFaultContext(new BranchFaultContext(fault.getId(), resolution.getBranchId(),
+                    resolution.getPositionAlpha(), resolution.getReferenceSide()));
+            ShortCircuitFault sc = new ShortCircuitFault(resolution.getBranchId(), fault.getId(), rFault, xFault, scType);
+            return FaultProcessingResult.ready(fault, sc);
+        }
+
         String elementId = fault.getElementId();
         Bus bus = network.getBusBreakerView().getBus(elementId);
         if (bus == null) {
             return FaultProcessingResult.failure(fault, String.format("Short circuit element '%s' not found, fault: %s is ignored", elementId, fault.getId()));
         }
-        double rFault = fault.getRToGround();
-        double xFault = fault.getXToGround();
         ShortCircuitFault sc = new ShortCircuitFault(bus.getId(), bus.getId(), rFault, xFault, scType);
         return FaultProcessingResult.ready(fault, sc);
     }

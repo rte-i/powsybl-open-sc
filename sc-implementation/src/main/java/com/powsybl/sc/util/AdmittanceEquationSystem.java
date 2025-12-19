@@ -10,6 +10,7 @@ package com.powsybl.sc.util;
 import com.powsybl.openloadflow.ac.AcLoadFlowContext;
 import com.powsybl.openloadflow.ac.AcLoadFlowParameters;
 import com.powsybl.openloadflow.ac.AcloadFlowEngine;
+import com.powsybl.openloadflow.adm.AdmittanceVirtualNetwork;
 import com.powsybl.openloadflow.equations.EquationSystem;
 import com.powsybl.openloadflow.equations.VariableSet;
 import com.powsybl.openloadflow.network.*;
@@ -22,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -76,8 +78,8 @@ public final class AdmittanceEquationSystem {
         ADM_STEADY_STATE,
     }
 
-    private static void createBranches(LfNetwork network, VariableSet<VariableType> variableSet, EquationSystem<VariableType, EquationType> equationSystem, AdmittanceType admittanceType) {
-        for (LfBranch branch : network.getBranches()) {
+    private static void createBranches(Collection<LfBranch> branches, VariableSet<VariableType> variableSet, EquationSystem<VariableType, EquationType> equationSystem, AdmittanceType admittanceType) {
+        for (LfBranch branch : branches) {
             LfBus bus1 = branch.getBus1();
             LfBus bus2 = branch.getBus2();
             PiModel piModel = branch.getPiModel();
@@ -157,10 +159,10 @@ public final class AdmittanceEquationSystem {
         return Pair.create(tmpG, tmpB);
     }
 
-    private static void createShunts(LfNetwork network, VariableSet<VariableType> variableSet, EquationSystem<VariableType, EquationType> equationSystem, AdmittanceType admittanceType,
+    private static void createShunts(Collection<LfBus> buses, VariableSet<VariableType> variableSet, EquationSystem<VariableType, EquationType> equationSystem, AdmittanceType admittanceType,
                                      AdmittanceVoltageProfileType admittanceVoltageProfileType, AdmittancePeriodType admittancePeriodType,
-                                     boolean isShuntsIgnore, FeedersAtNetwork feeders) {
-        for (LfBus bus : network.getBuses()) {
+                                     boolean isShuntsIgnore, FeedersAtNetwork feeders, LfNetwork network) {
+        for (LfBus bus : buses) {
 
             //total shunt at bus to be integrated in the admittance matrix
             double g = 0.;
@@ -261,13 +263,13 @@ public final class AdmittanceEquationSystem {
 
         return create(network, variableSet,
                 admittanceType, admittanceVoltageProfileType, admittancePeriodType, isShuntsIgnore,
-                equationsSystemFeeders, acLoadFlowParameters);
+                equationsSystemFeeders, acLoadFlowParameters, null);
     }
 
     public static EquationSystem<VariableType, EquationType> create(LfNetwork network, VariableSet<VariableType> variableSet,
                                                                     AdmittanceType admittanceType, AdmittanceVoltageProfileType admittanceVoltageProfileType,
                                                                     AdmittancePeriodType admittancePeriodType, boolean isShuntsIgnore, FeedersAtNetwork feeders,
-                                                                    AcLoadFlowParameters acLoadFlowParameters) {
+                                                                    AcLoadFlowParameters acLoadFlowParameters, AdmittanceVirtualNetwork virtualNetwork) {
 
         EquationSystem<VariableType, EquationType> equationSystem = new EquationSystem<>();
 
@@ -278,9 +280,10 @@ public final class AdmittanceEquationSystem {
             }
         }
 
-        createBranches(network, variableSet, equationSystem, admittanceType);
+        AdmittanceVirtualNetwork topology = virtualNetwork != null ? virtualNetwork : AdmittanceVirtualNetwork.empty(network);
+        createBranches(topology.getBranches(), variableSet, equationSystem, admittanceType);
         if (admittanceType != AdmittanceType.ADM_INJ) { //shunts created in the admittance matrix are only those that really exist in the network
-            createShunts(network, variableSet, equationSystem, admittanceType, admittanceVoltageProfileType, admittancePeriodType, isShuntsIgnore, feeders);
+            createShunts(topology.getBuses(), variableSet, equationSystem, admittanceType, admittanceVoltageProfileType, admittancePeriodType, isShuntsIgnore, feeders, network);
         }
 
         return equationSystem;

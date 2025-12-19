@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Jean-Baptiste Heyberger <jbheyberger at gmail.com>
@@ -54,6 +56,7 @@ public class ShortCircuitEngineParameters {
     private ShortCircuitNorm norm;
 
     private final List<BranchFaultContext> branchFaultContexts = new ArrayList<>();
+    private final ConcurrentHashMap<String, String> branchFaultBusIds = new ConcurrentHashMap<>();
 
     public ShortCircuitEngineParameters(LoadFlowParameters loadFlowParameters, MatrixFactory matrixFactory, AnalysisType analysisType, List<ShortCircuitFault> faults, boolean isVoltageExport, VoltageProfileType vProfile, boolean ignoreShunts, PeriodType periodType, ShortCircuitNorm norm) {
         this.loadFlowParameters = Objects.requireNonNull(loadFlowParameters);
@@ -117,5 +120,15 @@ public class ShortCircuitEngineParameters {
 
     public List<BranchFaultContext> getBranchFaultContexts() {
         return Collections.unmodifiableList(branchFaultContexts);
+    }
+
+    public void registerBranchFaultBus(String faultId, String busId) {
+        Objects.requireNonNull(faultId);
+        Objects.requireNonNull(busId);
+        branchFaultBusIds.put(faultId, busId);
+    }
+
+    public Optional<String> getBranchFaultBusId(String faultId) {
+        return Optional.ofNullable(branchFaultBusIds.get(faultId));
     }
 }

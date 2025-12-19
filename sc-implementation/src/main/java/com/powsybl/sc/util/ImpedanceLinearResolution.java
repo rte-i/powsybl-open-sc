@@ -8,6 +8,7 @@
 package com.powsybl.sc.util;
 
 import com.powsybl.math.matrix.DenseMatrix;
+import com.powsybl.openloadflow.adm.AdmittanceVirtualNetwork;
 import com.powsybl.openloadflow.equations.EquationSystem;
 import com.powsybl.openloadflow.equations.VariableSet;
 import com.powsybl.openloadflow.network.LfBranch;
@@ -320,15 +321,24 @@ public class ImpedanceLinearResolution {
 
         FeedersAtNetwork equationsSystemFeeders = new FeedersAtNetwork();
         EquationSystem<VariableType, EquationType> equationSystem
-                = AdmittanceEquationSystem.create(network, new VariableSet<>(), parameters.getAdmittanceType(), parameters.getTheveninVoltageProfileType(), parameters.getTheveninPeriodType(), parameters.isTheveninIgnoreShunts(), equationsSystemFeeders, parameters.getAcLoadFlowParameters());
+                = AdmittanceEquationSystem.create(network, new VariableSet<>(), parameters.getAdmittanceType(), parameters.getTheveninVoltageProfileType(), parameters.getTheveninPeriodType(), parameters.isTheveninIgnoreShunts(), equationsSystemFeeders, parameters.getAcLoadFlowParameters(), parameters.getVirtualNetwork());
 
         //Get bus by voltage level
+        AdmittanceVirtualNetwork virtualNetwork = parameters.getVirtualNetwork();
         List<LfBus> inputBusses = new ArrayList<>();
         for (CalculationLocation faultBranchLocationInfo : parameters.getCalculationLocations()) {
-            String iidmBranchId = faultBranchLocationInfo.getIidmBusInfo().getKey();
-            int branchSide = faultBranchLocationInfo.getIidmBusInfo().getValue();
-
-            LfBus bus = getLfBusFromIidmBranch(iidmBranchId, branchSide, network);
+            LfBus bus = null;
+            String lfBusId = faultBranchLocationInfo.getLfBusInfo();
+            if (lfBusId != null && !lfBusId.isEmpty()) {
+                bus = network.getBusById(lfBusId);
+                if (bus == null && virtualNetwork != null) {
+                    bus = virtualNetwork.getBusById(lfBusId);
+                }
+            } else if (faultBranchLocationInfo.getIidmBusInfo() != null) {
+                String iidmBranchId = faultBranchLocationInfo.getIidmBusInfo().getKey();
+                int branchSide = faultBranchLocationInfo.getIidmBusInfo().getValue();
+                bus = getLfBusFromIidmBranch(iidmBranchId, branchSide, network);
+            }
             if (bus != null) {
                 inputBusses.add(bus);
                 faultBranchLocationInfo.setLfBusInfo(bus.getId());

@@ -16,9 +16,9 @@ import java.util.Objects;
  */
 public class CalculationLocation {
 
-    private final String busLocation;
+    private String busLocation;
 
-    private final String bus2Location; // used in case computations need 2 busses in input: for example in biphased common support short circuit computations
+    private String bus2Location; // used in case computations need 2 busses in input: for example in biphased common support short circuit computations
 
     private Pair<String, Integer > iidmBusInfo; // additional iidm info to make the correspondence between iidm info and lfNetwork info
 
@@ -43,6 +43,14 @@ public class CalculationLocation {
 
     public String getBus2Location() {
         return bus2Location;
+    }
+
+    public void setBusLocation(String busLocation) {
+        this.busLocation = Objects.requireNonNull(busLocation);
+    }
+
+    public void setBus2Location(String bus2Location) {
+        this.bus2Location = Objects.requireNonNull(bus2Location);
     }
 
     public void setIidmBusInfo(Pair<String, Integer> iidmBusInfo) {

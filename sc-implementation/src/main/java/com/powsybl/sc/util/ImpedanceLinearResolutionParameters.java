@@ -9,6 +9,7 @@ package com.powsybl.sc.util;
 
 import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.openloadflow.ac.AcLoadFlowParameters;
+import com.powsybl.openloadflow.adm.AdmittanceVirtualNetwork;
 
 import java.util.List;
 import java.util.Objects;
@@ -49,9 +50,24 @@ public class ImpedanceLinearResolutionParameters {
 
     private final AdmittanceEquationSystem.AdmittanceType admittanceType;
 
+    private final AdmittanceVirtualNetwork virtualNetwork;
+
     public ImpedanceLinearResolutionParameters(AcLoadFlowParameters acLoadFlowParameters, MatrixFactory matrixFactory, List<CalculationLocation> calculationLocations, boolean voltageUpdate,
                                                AdmittanceEquationSystem.AdmittanceVoltageProfileType theveninVoltageProfileType, AdmittanceEquationSystem.AdmittancePeriodType theveninPeriodType, AdmittanceEquationSystem.AdmittanceType admittanceType,
                                                boolean theveninIgnoreShunts) {
+        this(acLoadFlowParameters, matrixFactory, calculationLocations, voltageUpdate,
+                theveninVoltageProfileType, theveninPeriodType, admittanceType, theveninIgnoreShunts, null, null);
+    }
+
+    public ImpedanceLinearResolutionParameters(AcLoadFlowParameters acLoadFlowParameters, MatrixFactory matrixFactory, List<CalculationLocation> calculationLocations, boolean voltageUpdate,
+                                               AdmittanceEquationSystem.AdmittanceVoltageProfileType theveninVoltageProfileType, AdmittanceEquationSystem.AdmittancePeriodType theveninPeriodType, AdmittanceEquationSystem.AdmittanceType admittanceType,
+                                               boolean theveninIgnoreShunts, AdmittanceVirtualNetwork virtualNetwork) {
+        this(acLoadFlowParameters, matrixFactory, calculationLocations, voltageUpdate, theveninVoltageProfileType, theveninPeriodType, admittanceType, theveninIgnoreShunts, virtualNetwork, null);
+    }
+
+    public ImpedanceLinearResolutionParameters(AcLoadFlowParameters acLoadFlowParameters, MatrixFactory matrixFactory, List<CalculationLocation> calculationLocations, boolean voltageUpdate,
+                                               AdmittanceEquationSystem.AdmittanceVoltageProfileType theveninVoltageProfileType, AdmittanceEquationSystem.AdmittancePeriodType theveninPeriodType, AdmittanceEquationSystem.AdmittanceType admittanceType,
+                                               boolean theveninIgnoreShunts, AdmittanceVirtualNetwork virtualNetwork, List<CalculationLocation> biphasedVoltageLevelLocation) {
         this.acLoadFlowParameters = Objects.requireNonNull(acLoadFlowParameters);
         this.matrixFactory = Objects.requireNonNull(matrixFactory);
         this.calculationLocations = Objects.requireNonNull(calculationLocations);
@@ -60,14 +76,12 @@ public class ImpedanceLinearResolutionParameters {
         this.voltageProfileType = theveninVoltageProfileType;
         this.periodType = theveninPeriodType;
         this.admittanceType = admittanceType;
+        this.virtualNetwork = virtualNetwork;
+        this.biphasedCalculationLocations = biphasedVoltageLevelLocation;
     }
 
-    public ImpedanceLinearResolutionParameters(AcLoadFlowParameters acLoadFlowParameters, MatrixFactory matrixFactory, List<CalculationLocation> calculationLocations, boolean voltageUpdate,
-                                               AdmittanceEquationSystem.AdmittanceVoltageProfileType theveninVoltageProfileType, AdmittanceEquationSystem.AdmittancePeriodType theveninPeriodType, AdmittanceEquationSystem.AdmittanceType admittanceType,
-                                               boolean theveninIgnoreShunts, List<CalculationLocation> biphasedVoltageLevelLocation) {
-        this(acLoadFlowParameters, matrixFactory, calculationLocations, voltageUpdate, theveninVoltageProfileType, theveninPeriodType, admittanceType, theveninIgnoreShunts);
-        this.biphasedCalculationLocations = biphasedVoltageLevelLocation;
-
+    public AdmittanceVirtualNetwork getVirtualNetwork() {
+        return virtualNetwork;
     }
 
     public AcLoadFlowParameters getAcLoadFlowParameters() {

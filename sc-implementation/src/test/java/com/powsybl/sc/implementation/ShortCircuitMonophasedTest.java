@@ -20,6 +20,7 @@ import com.powsybl.math.matrix.DenseMatrixFactory;
 import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.openloadflow.OpenLoadFlowProvider;
 import com.powsybl.sc.extensions.GeneratorFortescueTypeAdder;
+import com.powsybl.sc.extensions.ShortCircuitFaultSpecExtensionAdder;
 import com.powsybl.sc.util.ReferenceNetwork;
 import com.powsybl.shortcircuit.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Jean-Baptiste Heyberger <jbheyberger at gmail.com>
@@ -152,6 +154,50 @@ public class ShortCircuitMonophasedTest {
 
         assertEquals(14548.104511643787, magnitudeFaultResult.getCurrent(), 0.01);
 
+    }
+
+    @Test
+    void branchFaultMonophasedRespondsToFaultImpedance() {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        loadFlowParameters.setTwtSplitShuntAdmittance(true);
+        Network network = ReferenceNetwork.createShortCircuitIec31testNetwork();
+        LoadFlow.run(network, loadFlowParameters);
+
+        double baseCurrent = runMonophasedBranchFault(0.0);
+        double resistiveCurrent = runMonophasedBranchFault(0.5);
+
+        assertTrue(baseCurrent > 0);
+        assertTrue(resistiveCurrent > 0);
+        assertTrue(resistiveCurrent < baseCurrent);
+    }
+
+    private double runMonophasedBranchFault(double rFault) {
+        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+        loadFlowParameters.setTwtSplitShuntAdmittance(true);
+        Network network = ReferenceNetwork.createShortCircuitIec31testNetwork();
+        LoadFlow.run(network, loadFlowParameters);
+
+        network.newExtension(ShortCircuitFaultSpecExtensionAdder.class)
+                .withBranchFault("BF_MONO", "L1_B2_B3", 0.5)
+                .add();
+
+        ShortCircuitAnalysisProvider provider = new OpenShortCircuitProvider(new DenseMatrixFactory());
+        ComputationManager computationManager = LocalComputationManager.getDefault();
+        ShortCircuitParameters scParameters = new ShortCircuitParameters();
+
+        Fault branchFault = new BranchFault("BF_MONO", "L1_B2_B3", rFault, 0.0,
+                Fault.ConnectionType.SERIES, Fault.FaultType.SINGLE_PHASE, 0.5);
+        ShortCircuitAnalysisResult result = provider.run(network, Collections.singletonList(branchFault),
+                scParameters, computationManager, Collections.emptyList()).join();
+
+        List<FaultResult> faultResults = result.getFaultResults();
+        ShortCircuitStudyReport report = result.getExtension(ShortCircuitStudyReport.class);
+        assertEquals(1, faultResults.size(), () -> "Fault count mismatch. Diagnostics: "
+                + (report == null ? "none" : report.getDiagnostics()));
+        FaultResult faultResult = faultResults.get(0);
+        assertEquals(FaultResult.Status.SUCCESS, faultResult.getStatus());
+
+        return ((MagnitudeFaultResult) faultResult).getCurrent();
     }
 
     @Test
