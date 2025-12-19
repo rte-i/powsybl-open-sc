@@ -11,6 +11,7 @@ import com.google.auto.service.AutoService;
 import com.google.common.base.Stopwatch;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.iidm.network.Bus;
+import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.loadflow.LoadFlow;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -18,6 +19,7 @@ import com.powsybl.math.matrix.MatrixFactory;
 import com.powsybl.math.matrix.SparseMatrixFactory;
 import com.powsybl.openloadflow.OpenLoadFlowProvider;
 import com.powsybl.openloadflow.network.LfBus;
+import com.powsybl.sc.extensions.BranchFaultSpec;
 import com.powsybl.sc.extensions.ShortCircuitFaultSpecExtension;
 import com.powsybl.sc.extensions.ShortCircuitStudyOptionsExtension;
 import com.powsybl.sc.util.FeedersAtBusResult;
@@ -37,6 +39,8 @@ import java.util.concurrent.TimeUnit;
 public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenShortCircuitProvider.class);
+
+    private static final double BRANCH_POSITION_EPS = 1e-9;
 
     private final MatrixFactory matrixFactory;
 
@@ -236,6 +240,12 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
             if (resolution.getStatus() == BranchFaultSpecificationResolver.Resolution.Status.FAILURE) {
                 return FaultProcessingResult.failure(fault, resolution.buildDiagnosticsMessage("Branch fault ignored"));
             }
+            Optional<Bus> boundaryBus = findBoundaryBus(resolution, network);
+            if (boundaryBus.isPresent()) {
+                Bus bus = boundaryBus.get();
+                ShortCircuitFault sc = new ShortCircuitFault(bus.getId(), bus.getId(), rFault, xFault, scType);
+                return FaultProcessingResult.ready(fault, sc);
+            }
             engineParameters.addBranchFaultContext(new BranchFaultContext(fault.getId(), resolution.getBranchId(),
                     resolution.getPositionAlpha(), resolution.getReferenceSide()));
             ShortCircuitFault sc = new ShortCircuitFault(resolution.getBranchId(), fault.getId(), rFault, xFault, scType);
@@ -261,6 +271,29 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
                 faultResults.add(failureResult);
             }
         }
+    }
+
+    private Optional<Bus> findBoundaryBus(BranchFaultSpecificationResolver.Resolution resolution, Network network) {
+        double alpha = resolution.getPositionAlpha();
+        if (alpha > BRANCH_POSITION_EPS && alpha < 1.0 - BRANCH_POSITION_EPS) {
+            return Optional.empty();
+        }
+        Line line = network.getLine(resolution.getBranchId());
+        if (line == null) {
+            return Optional.empty();
+        }
+        Bus bus1 = line.getTerminal1().getBusBreakerView().getBus();
+        Bus bus2 = line.getTerminal2().getBusBreakerView().getBus();
+        if (bus1 == null || bus2 == null) {
+            return Optional.empty();
+        }
+        boolean referenceIsBus1 = resolution.getReferenceSide() == BranchFaultSpec.BranchSide.FROM;
+        if (alpha <= BRANCH_POSITION_EPS) {
+            return Optional.of(referenceIsBus1 ? bus1 : bus2);
+        } else if (alpha >= 1.0 - BRANCH_POSITION_EPS) {
+            return Optional.of(referenceIsBus1 ? bus2 : bus1);
+        }
+        return Optional.empty();
     }
 
     private ShortCircuitEngineParameters.VoltageProfileType toVoltageProfileType(ShortCircuitStudyOptionsExtension.VoltageProfile voltageProfile) {

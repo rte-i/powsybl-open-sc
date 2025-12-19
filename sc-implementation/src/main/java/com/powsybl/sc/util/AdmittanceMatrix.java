@@ -167,16 +167,15 @@ public class AdmittanceMatrix implements AutoCloseable {
         int columnCount = getColCount();
 
         //intialization of accessors
-        busNumToRowR = new ArrayList<>();
-        busNumToColR = new ArrayList<>();
-        busNumToRowI = new ArrayList<>();
-        busNumToColI = new ArrayList<>();
-        for (int i = 0; i < 2 * lfNetwork.getBuses().size(); i++) {
-            busNumToRowR.add(0);
-            busNumToColR.add(0);
-            busNumToRowI.add(0);
-            busNumToColI.add(0);
-        }
+        int maxBusNum = equationSystem.getIndex().getSortedEquationsToSolve().stream()
+                .mapToInt(Equation::getElementNum)
+                .max()
+                .orElse(lfNetwork.getBuses().size() - 1);
+        int accessorSize = Math.max(0, maxBusNum + 1);
+        busNumToRowR = new ArrayList<>(Collections.nCopies(accessorSize, 0));
+        busNumToColR = new ArrayList<>(Collections.nCopies(accessorSize, 0));
+        busNumToRowI = new ArrayList<>(Collections.nCopies(accessorSize, 0));
+        busNumToColI = new ArrayList<>(Collections.nCopies(accessorSize, 0));
 
         int estimatedNonZeroValueCount = rowCount * 3;
         matrix = matrixFactory.create(columnCount, rowCount, estimatedNonZeroValueCount); //matrix is the transposed of the standard admittance matrix
