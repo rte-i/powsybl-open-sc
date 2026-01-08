@@ -55,18 +55,24 @@ public class TheveninEquivalent {
 
     private static Pair<String, Integer > buildFaultBranchFromBusId(String busId, Network network) {
         Bus bus = network.getBusBreakerView().getBus(busId);
+        boolean useBusView = false;
+        if (bus == null) {
+            bus = network.getBusView().getBus(busId);
+            useBusView = bus != null;
+        }
         String branchId = "";
+        String targetBusId = bus != null ? bus.getId() : busId;
         int branchSide = 0;
         boolean isFound = false;
         for (Branch<?> branch : network.getBranches()) {
-            Bus bus1 = branch.getTerminal1().getBusBreakerView().getBus();
-            Bus bus2 = branch.getTerminal2().getBusBreakerView().getBus();
-            if (bus == bus1) {
+            Bus bus1 = useBusView ? branch.getTerminal1().getBusView().getBus() : branch.getTerminal1().getBusBreakerView().getBus();
+            Bus bus2 = useBusView ? branch.getTerminal2().getBusView().getBus() : branch.getTerminal2().getBusBreakerView().getBus();
+            if (bus1 != null && targetBusId.equals(bus1.getId())) {
                 branchId = branch.getId();
                 branchSide = 1;
                 isFound = true;
                 break;
-            } else if (bus == bus2) {
+            } else if (bus2 != null && targetBusId.equals(bus2.getId())) {
                 branchId = branch.getId();
                 branchSide = 2;
                 isFound = true;
@@ -83,25 +89,31 @@ public class TheveninEquivalent {
 
     private static Pair<String, Integer> buildFaultT3WbranchFromBusId(String busId, Network tmpNetwork) {
         Bus bus = tmpNetwork.getBusBreakerView().getBus(busId);
+        boolean useBusView = false;
+        if (bus == null) {
+            bus = tmpNetwork.getBusView().getBus(busId);
+            useBusView = bus != null;
+        }
         String branchId = "";
+        String targetBusId = bus != null ? bus.getId() : busId;
         int legNum = 0;
         boolean isFound = false;
         for (ThreeWindingsTransformer t3w : tmpNetwork.getThreeWindingsTransformers()) {
-            Bus bus1 = t3w.getLeg1().getTerminal().getBusBreakerView().getBus();
-            Bus bus2 = t3w.getLeg2().getTerminal().getBusBreakerView().getBus();
-            Bus bus3 = t3w.getLeg3().getTerminal().getBusBreakerView().getBus();
+            Bus bus1 = useBusView ? t3w.getLeg1().getTerminal().getBusView().getBus() : t3w.getLeg1().getTerminal().getBusBreakerView().getBus();
+            Bus bus2 = useBusView ? t3w.getLeg2().getTerminal().getBusView().getBus() : t3w.getLeg2().getTerminal().getBusBreakerView().getBus();
+            Bus bus3 = useBusView ? t3w.getLeg3().getTerminal().getBusView().getBus() : t3w.getLeg3().getTerminal().getBusBreakerView().getBus();
 
-            if (bus == bus1) {
+            if (bus1 != null && targetBusId.equals(bus1.getId())) {
                 branchId = t3w.getId();
                 legNum = 1;
                 isFound = true;
                 break;
-            } else if (bus == bus2) {
+            } else if (bus2 != null && targetBusId.equals(bus2.getId())) {
                 branchId = t3w.getId();
                 legNum = 2;
                 isFound = true;
                 break;
-            } else if (bus == bus3) {
+            } else if (bus3 != null && targetBusId.equals(bus3.getId())) {
                 branchId = t3w.getId();
                 legNum = 3;
                 isFound = true;

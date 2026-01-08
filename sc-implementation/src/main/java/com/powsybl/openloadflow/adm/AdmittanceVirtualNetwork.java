@@ -54,11 +54,11 @@ public final class AdmittanceVirtualNetwork {
         return new AdmittanceVirtualNetwork(network, List.of(), List.of(), network.getBranches(), Collections.emptyMap());
     }
 
-    public List<LfBus> getBuses() {
+    public Collection<LfBus> getBuses() {
         return buses.isEmpty() ? network.getBuses() : mergeCollections(network.getBuses(), buses);
     }
 
-    public List<LfBranch> getBranches() {
+    public Collection<LfBranch> getBranches() {
         return branches.isEmpty() ? network.getBranches() : branches;
     }
 

@@ -195,6 +195,9 @@ public final class AdmittanceEquationSystem {
                 }
 
                 ScLoad scLoad = (ScLoad) bus.getProperty(ShortCircuitExtensions.PROPERTY_SHORT_CIRCUIT);
+                if (scLoad == null) {
+                    scLoad = new ScLoad(0.0, 0.0);
+                }
                 gLoadEq = scLoad.getGdEquivalent() / (vr * vr + vi * vi);
                 bLoadEq = scLoad.getBdEquivalent() / (vr * vr + vi * vi);
 
@@ -217,6 +220,9 @@ public final class AdmittanceEquationSystem {
                 }
 
                 ScLoad scLoad = (ScLoad) bus.getProperty(ShortCircuitExtensions.PROPERTY_SHORT_CIRCUIT);
+                if (scLoad == null) {
+                    scLoad = new ScLoad(0.0, 0.0);
+                }
                 gLoadEq = scLoad.getGdEquivalent() / (vr * vr + vi * vi);
                 bLoadEq = scLoad.getBdEquivalent() / (vr * vr + vi * vi);
 
@@ -271,7 +277,7 @@ public final class AdmittanceEquationSystem {
                                                                     AdmittancePeriodType admittancePeriodType, boolean isShuntsIgnore, FeedersAtNetwork feeders,
                                                                     AcLoadFlowParameters acLoadFlowParameters, AdmittanceVirtualNetwork virtualNetwork) {
 
-        EquationSystem<VariableType, EquationType> equationSystem = new EquationSystem<>();
+        EquationSystem<VariableType, EquationType> equationSystem = new EquationSystem<VariableType, EquationType>(EquationType.class, network, variableSet);
 
         if (admittanceType == AdmittanceType.ADM_ADMIT) {
             try (AcLoadFlowContext context = new AcLoadFlowContext(network, acLoadFlowParameters)) {

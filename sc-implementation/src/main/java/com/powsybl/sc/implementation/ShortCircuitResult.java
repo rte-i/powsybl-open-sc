@@ -14,6 +14,8 @@ import com.powsybl.openloadflow.network.LfNetwork;
 import com.powsybl.openloadflow.network.PiModel;
 import com.powsybl.sc.util.*;
 import com.powsybl.sc.util.extensions.AdmittanceConstants;
+import com.powsybl.sc.util.extensions.HomopolarModel;
+import com.powsybl.sc.util.extensions.ShortCircuitExtensions;
 import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
@@ -425,6 +427,48 @@ public class ShortCircuitResult {
         double bPi1 = piModel.getB1();
         double gPi2 = piModel.getG2();
         double bPi2 = piModel.getB2();
+
+        if (admittanceType == AdmittanceEquationSystem.AdmittanceType.ADM_THEVENIN_HOMOPOLAR) {
+            HomopolarModel homopolarModel = (HomopolarModel) branch.getProperty(ShortCircuitExtensions.PROPERTY_HOMOPOLAR_MODEL);
+            if (homopolarModel != null) {
+                if (branch.getBranchType() == LfBranch.BranchType.LINE) {
+                    double ro = homopolarModel.getRo();
+                    double xo = homopolarModel.getXo();
+                    double zoInvSquare = homopolarModel.getZoInvSquare();
+                    double g12 = rho * zoInvSquare * (ro * cosA + xo * sinA);
+                    double b12 = -rho * zoInvSquare * (xo * cosA + ro * sinA);
+                    double g1g12sum = rho * rho * (homopolarModel.getGom() + ro * zoInvSquare);
+                    double b1b12sum = rho * rho * (homopolarModel.getBom() - xo * zoInvSquare);
+                    double g21 = g12;
+                    double b21 = rho * zoInvSquare * (ro * sinA - xo * cosA);
+                    double g2g21sum = g1g12sum;
+                    double b2b21sum = b1b12sum;
+                    DenseMatrix mAdmittance = new DenseMatrix(4, 4);
+                    mAdmittance.add(0, 0, g1g12sum);
+                    mAdmittance.add(0, 1, -b1b12sum);
+                    mAdmittance.add(0, 2, -g12);
+                    mAdmittance.add(0, 3, b12);
+                    mAdmittance.add(1, 0, b1b12sum);
+                    mAdmittance.add(1, 1, g1g12sum);
+                    mAdmittance.add(1, 2, -b12);
+                    mAdmittance.add(1, 3, -g12);
+                    mAdmittance.add(2, 0, -g21);
+                    mAdmittance.add(2, 1, b21);
+                    mAdmittance.add(2, 2, g2g21sum);
+                    mAdmittance.add(2, 3, -b2b21sum);
+                    mAdmittance.add(3, 0, -b21);
+                    mAdmittance.add(3, 1, -g21);
+                    mAdmittance.add(3, 2, b2b21sum);
+                    mAdmittance.add(3, 3, g2g21sum);
+                    return mAdmittance.toDense();
+                } else if (branch.getBranchType() == LfBranch.BranchType.TRANSFO_2
+                        || branch.getBranchType() == LfBranch.BranchType.TRANSFO_3_LEG_1
+                        || branch.getBranchType() == LfBranch.BranchType.TRANSFO_3_LEG_2
+                        || branch.getBranchType() == LfBranch.BranchType.TRANSFO_3_LEG_3) {
+                    return homopolarModel.computeHomopolarAdmittanceMatrix().toDense();
+                }
+            }
+        }
 
         double g12 = rho * zInvSquare * (r * cosA + x * sinA);
         double b12 = -rho * zInvSquare * (x * cosA + r * sinA);

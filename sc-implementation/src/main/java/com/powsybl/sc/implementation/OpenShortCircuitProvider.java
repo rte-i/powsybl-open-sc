@@ -9,6 +9,7 @@ package com.powsybl.sc.implementation;
 
 import com.google.auto.service.AutoService;
 import com.google.common.base.Stopwatch;
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.iidm.network.Bus;
 import com.powsybl.iidm.network.Line;
@@ -64,6 +65,11 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
 
     @Override
     public CompletableFuture<ShortCircuitAnalysisResult> run(Network network, List<Fault> faults, ShortCircuitParameters parameters, ComputationManager computationManager, List<FaultParameters> faultParameters) {
+        return run(network, faults, parameters, computationManager, faultParameters, ReportNode.NO_OP);
+    }
+
+    @Override
+    public CompletableFuture<ShortCircuitAnalysisResult> run(Network network, List<Fault> faults, ShortCircuitParameters parameters, ComputationManager computationManager, List<FaultParameters> faultParameters, ReportNode reportNode) {
 
         Objects.requireNonNull(network);
         Objects.requireNonNull(parameters);
@@ -253,12 +259,45 @@ public class OpenShortCircuitProvider implements ShortCircuitAnalysisProvider {
         }
 
         String elementId = fault.getElementId();
-        Bus bus = network.getBusBreakerView().getBus(elementId);
+        Bus bus = resolveBus(network, elementId);
         if (bus == null) {
             return FaultProcessingResult.failure(fault, String.format("Short circuit element '%s' not found, fault: %s is ignored", elementId, fault.getId()));
         }
         ShortCircuitFault sc = new ShortCircuitFault(bus.getId(), bus.getId(), rFault, xFault, scType);
         return FaultProcessingResult.ready(fault, sc);
+    }
+
+    private Bus resolveBus(Network network, String elementId) {
+        Bus bus = network.getBusBreakerView().getBus(elementId);
+        if (bus != null) {
+            return bus;
+        }
+
+        bus = network.getBusView().getBus(elementId);
+        if (bus != null) {
+            return bus;
+        }
+
+        String voltageLevelId = elementId;
+        int underscoreIdx = elementId.indexOf('_');
+        if (underscoreIdx > 0) {
+            voltageLevelId = elementId.substring(0, underscoreIdx);
+        }
+
+        String targetVoltageLevelId = voltageLevelId;
+
+        bus = network.getBusBreakerView().getBusStream()
+                .filter(b -> targetVoltageLevelId.equals(b.getVoltageLevel().getId()))
+                .findFirst()
+                .orElse(null);
+        if (bus != null) {
+            return bus;
+        }
+
+        return network.getBusView().getBusStream()
+                .filter(b -> targetVoltageLevelId.equals(b.getVoltageLevel().getId()))
+                .findFirst()
+                .orElse(null);
     }
 
     private void addFailureResults(List<FaultResult> faultResults, List<FaultProcessingResult> processingResults) {

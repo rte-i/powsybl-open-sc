@@ -144,8 +144,13 @@ public class HomopolarModel {
 
                 homopolarExtension.ro = r0;
                 homopolarExtension.xo = x0;
-                homopolarExtension.gom = gPi1 * gCoeff; // check if acceptable approach
-                homopolarExtension.bom = bPi1 * bCoeff;
+                if (scLine.hasB0()) {
+                    homopolarExtension.gom = 0.0;
+                    homopolarExtension.bom = scLine.getB0();
+                } else {
+                    homopolarExtension.gom = gPi1 * gCoeff; // check if acceptable approach
+                    homopolarExtension.bom = bPi1 * bCoeff;
+                }
             }
         } else if (branch.getBranchType() == LfBranch.BranchType.TRANSFO_2) {
             // branch is a 2 windings transformer and homopolar data available
@@ -177,8 +182,13 @@ public class HomopolarModel {
 
                 homopolarExtension.ro = rok + scTransfo.getR1Ground() + scTransfo.getR2Ground(); // we assume by construction that if side is not grounded then rGround = 0
                 homopolarExtension.xo = xok + scTransfo.getX1Ground() + scTransfo.getX2Ground();
-                homopolarExtension.gom = gPi1 * gCoeff / kT; //TODO : adapt
-                homopolarExtension.bom = bPi1 * bCoeff / kT;  //TODO : adapt
+                if (scTransfo.hasMagnetizing()) {
+                    homopolarExtension.gom = scTransfo.getGom() / kT;
+                    homopolarExtension.bom = scTransfo.getBom() / kT;
+                } else {
+                    homopolarExtension.gom = gPi1 * gCoeff / kT; //TODO : adapt
+                    homopolarExtension.bom = bPi1 * bCoeff / kT;  //TODO : adapt
+                }
 
                 homopolarExtension.leg1ConnectionType = scTransfo.getLeg1ConnectionType();
                 homopolarExtension.leg2ConnectionType = scTransfo.getLeg2ConnectionType();

@@ -7,6 +7,7 @@
  */
 package com.powsybl.sc.implementation;
 
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
@@ -42,7 +43,7 @@ class ShortCircuitIecProviderTest {
 
         List<Fault> faults = Collections.singletonList(new BusFault("F1", "B1"));
 
-        ShortCircuitAnalysisResult scar = provider.run(network, faults, scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult scar = provider.run(network, faults, scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         ShortCircuitStudyReport report = scar.getExtension(ShortCircuitStudyReport.class);
         assertNotNull(report);
@@ -66,7 +67,7 @@ class ShortCircuitIecProviderTest {
 
         List<Fault> faults = Collections.singletonList(new BusFault("F1", "B1"));
 
-        ShortCircuitAnalysisResult scar = provider.run(network, faults, scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult scar = provider.run(network, faults, scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         ShortCircuitStudyReport report = scar.getExtension(ShortCircuitStudyReport.class);
         assertNotNull(report);

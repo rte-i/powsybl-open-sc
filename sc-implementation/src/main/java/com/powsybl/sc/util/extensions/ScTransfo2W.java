@@ -28,6 +28,8 @@ public class ScTransfo2W {
     private final double x1Ground;
     private final double r2Ground;
     private final double x2Ground;
+    private final double gom;
+    private final double bom;
 
     /*ScTransfo2W(LegConnectionType leg1ConnectionType, LegConnectionType leg2ConnectionType, double coeffRo, double coeffXo, boolean freeFluxes) {
         this(leg1ConnectionType, leg2ConnectionType, coeffRo, coeffXo, freeFluxes, 1d, 0., 0., 0., 0.);
@@ -35,6 +37,11 @@ public class ScTransfo2W {
 
     ScTransfo2W(WindingConnectionType leg1ConnectionType, WindingConnectionType leg2ConnectionType, double ro, double xo, boolean freeFluxes,
                 double r1Ground, double x1Ground, double r2Ground, double x2Ground) {
+        this(leg1ConnectionType, leg2ConnectionType, ro, xo, freeFluxes, r1Ground, x1Ground, r2Ground, x2Ground, Double.NaN, Double.NaN);
+    }
+
+    ScTransfo2W(WindingConnectionType leg1ConnectionType, WindingConnectionType leg2ConnectionType, double ro, double xo, boolean freeFluxes,
+                double r1Ground, double x1Ground, double r2Ground, double x2Ground, double gom, double bom) {
         this.leg1ConnectionType = Objects.requireNonNull(leg1ConnectionType);
         this.leg2ConnectionType = Objects.requireNonNull(leg2ConnectionType);
         this.ro = ro;
@@ -44,6 +51,8 @@ public class ScTransfo2W {
         this.r2Ground = r2Ground;
         this.x1Ground = x1Ground;
         this.x2Ground = x2Ground;
+        this.gom = gom;
+        this.bom = bom;
     }
 
     public WindingConnectionType getLeg1ConnectionType() {
@@ -80,5 +89,17 @@ public class ScTransfo2W {
 
     public double getR2Ground() {
         return r2Ground;
+    }
+
+    public boolean hasMagnetizing() {
+        return !Double.isNaN(gom) && !Double.isNaN(bom);
+    }
+
+    public double getGom() {
+        return gom;
+    }
+
+    public double getBom() {
+        return bom;
     }
 }

@@ -14,10 +14,16 @@ public class ScLine {
 
     private final double xo; // Xo : value of the homopolar admittance (in pu, same base as X) expressed at the leg2 side
     private final double ro; // Ro : value of the homopolar resistance (in pu, same base as R) expressed at the leg2 side
+    private final double b0;
 
     public ScLine(double ro, double xo) {
+        this(ro, xo, Double.NaN);
+    }
+
+    public ScLine(double ro, double xo, double b0) {
         this.ro = ro;
         this.xo = xo;
+        this.b0 = b0;
     }
 
     public double getRo() {
@@ -26,5 +32,13 @@ public class ScLine {
 
     public double getXo() {
         return xo;
+    }
+
+    public boolean hasB0() {
+        return !Double.isNaN(b0);
+    }
+
+    public double getB0() {
+        return b0;
     }
 }

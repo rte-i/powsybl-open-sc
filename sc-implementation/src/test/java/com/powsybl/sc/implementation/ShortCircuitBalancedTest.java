@@ -7,6 +7,7 @@
  */
 package com.powsybl.sc.implementation;
 
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.*;
@@ -99,7 +100,7 @@ public class ShortCircuitBalancedTest {
         faults.add(bf1);
         faults.add(bf2);
 
-        ShortCircuitAnalysisResult scar = provider.run(nt2, faults, scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult scar = provider.run(nt2, faults, scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         List<FaultResult> frs = scar.getFaultResults();
 
@@ -143,7 +144,7 @@ public class ShortCircuitBalancedTest {
         faults.add(bf3);
         faults.add(bf4);
 
-        ShortCircuitAnalysisResult scar = provider.run(nt4, faults, scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult scar = provider.run(nt4, faults, scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         List<FaultResult> frs = scar.getFaultResults();
 
@@ -171,7 +172,7 @@ public class ShortCircuitBalancedTest {
         ShortCircuitParameters scp = new ShortCircuitParameters();
 
         Fault invalidFault = new BusFault("F-invalid", "B1", 0.0, 0.0, Fault.ConnectionType.PARALLEL, Fault.FaultType.THREE_PHASE);
-        ShortCircuitAnalysisResult result = provider.run(nt2, Collections.singletonList(invalidFault), scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult result = provider.run(nt2, Collections.singletonList(invalidFault), scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         assertEquals(1, result.getFaultResults().size());
         FaultResult faultResult = result.getFaultResults().get(0);
@@ -215,7 +216,7 @@ public class ShortCircuitBalancedTest {
 
         Fault transformerBranchFault = new BranchFault("BF_TFO", "T1", 0.5);
         ShortCircuitAnalysisResult result = provider.run(network, Collections.singletonList(transformerBranchFault),
-                scParameters, cm, Collections.emptyList()).join();
+                scParameters, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         assertEquals(1, result.getFaultResults().size());
         FaultResult faultResult = result.getFaultResults().get(0);
@@ -253,7 +254,7 @@ public class ShortCircuitBalancedTest {
         faults.add(bf1);
         faults.add(bf2);
 
-        ShortCircuitAnalysisResult scar = provider.run(nt2, faults, scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult scar = provider.run(nt2, faults, scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         List<FaultResult> frs = scar.getFaultResults();
 
@@ -552,7 +553,7 @@ public class ShortCircuitBalancedTest {
 
         Fault branchFault = new BranchFault("BF_BRANCH", "B1_B2", alpha);
         ShortCircuitAnalysisResult result = provider.run(network, Collections.singletonList(branchFault),
-                scParameters, computationManager, Collections.emptyList()).join();
+                scParameters, computationManager, Collections.emptyList(), ReportNode.NO_OP).join();
 
         List<FaultResult> faultResults = result.getFaultResults();
         ShortCircuitStudyReport report = result.getExtension(ShortCircuitStudyReport.class);

@@ -7,6 +7,7 @@
  */
 package com.powsybl.sc.implementation;
 
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.ieeecdf.converter.IeeeCdfNetworkFactory;
@@ -146,7 +147,7 @@ class ShortCircuitBranchFaultIeeeTest {
 
     private static ShortCircuitAnalysisResult runProvider(Network network, List<Fault> faults) {
         ShortCircuitParameters parameters = new ShortCircuitParameters();
-        return PROVIDER.run(network, faults, parameters, CM, Collections.emptyList()).join();
+        return PROVIDER.run(network, faults, parameters, CM, Collections.emptyList(), ReportNode.NO_OP).join();
     }
 
     private static Map<String, MagnitudeFaultResult> runBranchFaultBatch(String prefix, String branchId) {

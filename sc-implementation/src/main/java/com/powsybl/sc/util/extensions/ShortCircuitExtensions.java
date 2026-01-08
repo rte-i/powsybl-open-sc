@@ -17,6 +17,8 @@ import com.powsybl.iidm.network.extensions.*;
 import com.powsybl.openloadflow.network.*;
 import com.powsybl.sc.extensions.*;
 import org.apache.commons.math3.util.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,8 +36,14 @@ public final class ShortCircuitExtensions {
     public static final String PROPERTY_SHORT_CIRCUIT_NORM = "ShortCircuitNorm";
 
     private static final double SB = 100.;
+    private static final double FREQ_HZ = 50.0;
+    private static final String LINE_PROP_LENGTH_KM = "pp.length_km";
+    private static final String LINE_PROP_C0_NF_PER_KM = "pp.c0_nf_per_km";
+    private static final String TRAFO_PROP_MAG0_RATIO = "pp.mag0_ratio";
+    private static final String TRAFO_PROP_MAG0_RX = "pp.mag0_rx";
 
     private static final double EPSILON = 0.00000001;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ShortCircuitExtensions.class);
 
     private ShortCircuitExtensions() {
     }
@@ -182,13 +190,28 @@ public final class ShortCircuitExtensions {
         double zBase = vNom2 * vNom2 / SB;
         double ro = line.getR() / zBase;
         double xo = line.getX() / zBase;
+        double b0Side = Double.NaN;
         LineFortescue extensions = line.getExtension(LineFortescue.class);
         if (extensions != null) {
             ro = extensions.getRz() / zBase;
             xo = extensions.getXz() / zBase;
         }
+        if (line.hasProperty(LINE_PROP_LENGTH_KM) && line.hasProperty(LINE_PROP_C0_NF_PER_KM)) {
+            double lengthKm = Double.parseDouble(line.getProperty(LINE_PROP_LENGTH_KM));
+            double c0 = Double.parseDouble(line.getProperty(LINE_PROP_C0_NF_PER_KM));
+            double b0Total = 2.0 * Math.PI * FREQ_HZ * c0 * 1e-9 * lengthKm;
+            double yBase = SB / (vNom2 * vNom2);
+            double b0Pu = b0Total / yBase;
+            // Zero-sequence shunt admittance stored per side for the homopolar model.
+            b0Side = b0Pu / 2.0;
+        }
 
-        lfBranch.setProperty(PROPERTY_SHORT_CIRCUIT, new ScLine(ro, xo));
+        lfBranch.setProperty(PROPERTY_SHORT_CIRCUIT, new ScLine(ro, xo, b0Side));
+
+        double b0TotalPu = Double.isFinite(b0Side) ? b0Side * 2.0 : Double.NaN;
+        if (!Double.isNaN(b0Side)) {
+            LOGGER.info("Line {} homopolar: ro={} xo={} bom_per_side={} b0_pu={}", lineId, ro, xo, b0Side, b0TotalPu);
+        }
     }
 
     private static void addTransfo2Extension(Network network, LfBranch lfBranch, ShortCircuitNormExtensions shortCircuitNormExtensions) {
@@ -211,6 +234,8 @@ public final class ShortCircuitExtensions {
         double x1Ground = 0.;
         double r2Ground = 0.;
         double x2Ground = 0.;
+        double gom = Double.NaN;
+        double bom = Double.NaN;
         var extensions = twt.getExtension(TwoWindingsTransformerFortescue.class);
         if (extensions != null) {
             ro = extensions.getRz() / zBase;
@@ -230,7 +255,21 @@ public final class ShortCircuitExtensions {
             kT = t2wNormExtension.getkNorm();
         }
 
-        lfBranch.setProperty(PROPERTY_SHORT_CIRCUIT, new ScTransfo2W(leg1ConnectionType, leg2ConnectionType, ro, xo, freeFluxes, r1Ground, x1Ground, r2Ground, x2Ground));
+        if (twt.hasProperty(TRAFO_PROP_MAG0_RATIO) && twt.hasProperty(TRAFO_PROP_MAG0_RX)) {
+            double mag0Ratio = Double.parseDouble(twt.getProperty(TRAFO_PROP_MAG0_RATIO));
+            double mag0Rx = Double.parseDouble(twt.getProperty(TRAFO_PROP_MAG0_RX));
+            double z0 = Math.hypot(ro, xo);
+            double zMag = z0 * mag0Ratio;
+            double xMag = zMag / Math.sqrt(1 + mag0Rx * mag0Rx);
+            double rMag = xMag * mag0Rx;
+            double denom = rMag * rMag + xMag * xMag;
+            if (denom > EPSILON) {
+                gom = rMag / denom;
+                bom = -xMag / denom;
+            }
+        }
+
+        lfBranch.setProperty(PROPERTY_SHORT_CIRCUIT, new ScTransfo2W(leg1ConnectionType, leg2ConnectionType, ro, xo, freeFluxes, r1Ground, x1Ground, r2Ground, x2Ground, gom, bom));
         lfBranch.setProperty(PROPERTY_SHORT_CIRCUIT_NORM, kT); // set in a separate extension because is does not depend only on iidm in input but also on the type of norm
     }
 

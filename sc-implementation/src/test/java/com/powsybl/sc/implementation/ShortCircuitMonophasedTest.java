@@ -7,6 +7,7 @@
  */
 package com.powsybl.sc.implementation;
 
+import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.*;
@@ -147,7 +148,7 @@ public class ShortCircuitMonophasedTest {
         BusFault bf1 = new BusFault("F1", "B2", 0., 0., Fault.ConnectionType.SERIES, Fault.FaultType.SINGLE_PHASE);
         faults.add(bf1);
 
-        ShortCircuitAnalysisResult scar = provider.run(network, faults, scp, cm, Collections.emptyList()).join();
+        ShortCircuitAnalysisResult scar = provider.run(network, faults, scp, cm, Collections.emptyList(), ReportNode.NO_OP).join();
 
         List<FaultResult> frs = scar.getFaultResults();
         MagnitudeFaultResult magnitudeFaultResult = (MagnitudeFaultResult) frs.get(0);
@@ -188,7 +189,7 @@ public class ShortCircuitMonophasedTest {
         Fault branchFault = new BranchFault("BF_MONO", "L1_B2_B3", rFault, 0.0,
                 Fault.ConnectionType.SERIES, Fault.FaultType.SINGLE_PHASE, 0.5);
         ShortCircuitAnalysisResult result = provider.run(network, Collections.singletonList(branchFault),
-                scParameters, computationManager, Collections.emptyList()).join();
+                scParameters, computationManager, Collections.emptyList(), ReportNode.NO_OP).join();
 
         List<FaultResult> faultResults = result.getFaultResults();
         ShortCircuitStudyReport report = result.getExtension(ShortCircuitStudyReport.class);

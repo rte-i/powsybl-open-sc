@@ -12,7 +12,6 @@ import com.powsybl.openloadflow.equations.Variable;
 import com.powsybl.openloadflow.equations.VariableSet;
 import com.powsybl.openloadflow.network.LfBranch;
 import com.powsybl.openloadflow.network.LfBus;
-import com.powsybl.sc.util.extensions.AdmittanceConstants;
 import com.powsybl.sc.util.extensions.HomopolarModel;
 import com.powsybl.sc.util.extensions.ShortCircuitExtensions;
 
@@ -39,8 +38,8 @@ public class AdmittanceEquationTermY2 extends AbstractAdmittanceEquationTerm {
                 // case where branch is a line with available homopolar parameters
                 g21 = rho * homopolarModel.getZoInvSquare() * (homopolarModel.getRo() * cosA + homopolarModel.getXo() * sinA);
                 b21 = rho * homopolarModel.getZoInvSquare() * (homopolarModel.getRo() * sinA - homopolarModel.getXo() * cosA);
-                g2g21sum = homopolarModel.getRo() * homopolarModel.getZoInvSquare() + gPi2 * AdmittanceConstants.COEF_XO_XD;
-                b2b21sum = -homopolarModel.getXo() * homopolarModel.getZoInvSquare() + bPi2 * AdmittanceConstants.COEF_XO_XD;
+                g2g21sum = rho * rho * (homopolarModel.getGom() + homopolarModel.getRo() * homopolarModel.getZoInvSquare());
+                b2b21sum = rho * rho * (homopolarModel.getBom() - homopolarModel.getXo() * homopolarModel.getZoInvSquare());
             } else if (branch.getBranchType() == LfBranch.BranchType.TRANSFO_2
                     || branch.getBranchType() == LfBranch.BranchType.TRANSFO_3_LEG_1
                     || branch.getBranchType() == LfBranch.BranchType.TRANSFO_3_LEG_2
