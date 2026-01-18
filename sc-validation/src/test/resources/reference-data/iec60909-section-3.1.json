@@ -1,5 +1,17 @@
 [
   {
+    "test_id": "IEC_60909_3.1_LLL_B3",
+    "iec_section": "3.1",
+    "fault_type": "LLL",
+    "bus_id": "B3",
+    "expected": {
+      "ik_ka": 34.62
+    },
+    "tolerance_percent": 1.0,
+    "source_reference": "IEC 60909:2016 Section 3.1",
+    "notes": "Three-phase symmetrical (balanced) fault at B3. Expected I\"k = 34.62398968800272 kA from ShortCircuitBalancedTest. C-factor cmax=1.05 for low voltage networks. Formula: I\"k = cmax * Un / (sqrt(3) * Zk) where Zk is the equivalent impedance at the fault location."
+  },
+  {
     "test_id": "IEC_60909_3.1_LG_B3",
     "iec_section": "3.1",
     "fault_type": "LG",

@@ -37,12 +37,13 @@ public final class Iec60909Networks {
      *   <li>Lines L1-L4: Distribution cables with Fortescue parameters</li>
      * </ul>
      *
-     * <h3>Reference Values:</h3>
+     * <h3>Reference Values (IEC 60909:2016):</h3>
      * <ul>
-     *   <li>LLL fault at B3: I"k approximately 77.98 kA</li>
-     *   <li>LL fault at B3: I"k approximately 67.52 kA</li>
-     *   <li>LG fault at B3: I"k approximately 35.70 kA</li>
+     *   <li>LLL fault at B3: I"k = 34.62 kA (three-phase symmetrical)</li>
      * </ul>
+     *
+     * <p>Note: The expected value is calculated using IEC 60909 methodology with
+     * cmax = 1.05 voltage factor for low-voltage networks.</p>
      *
      * @return a Network instance configured per IEC 60909:2016 Section 3.1
      * @see com.powsybl.sc.util.ReferenceNetwork#createShortCircuitIec31()
