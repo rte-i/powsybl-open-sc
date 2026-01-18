@@ -18,27 +18,40 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>powsybl-open-sc-implementation</artifactId>
-    <name>Short circuit implementation</name>
+    <artifactId>powsybl-open-sc-validation</artifactId>
+    <name>Short circuit validation</name>
+    <description>Validation test suite for IEC 60909 short-circuit calculations</description>
 
     <dependencies>
+        <!-- PowSyBl Short Circuit API -->
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-shortcircuit-api</artifactId>
         </dependency>
+
+        <!-- PowSyBl IIDM API -->
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-open-loadflow</artifactId>
+            <artifactId>powsybl-iidm-api</artifactId>
         </dependency>
+
+        <!-- Internal dependencies -->
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-iidm-extensions</artifactId>
+            <artifactId>powsybl-open-sc-implementation</artifactId>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-open-sc-extensions</artifactId>
         </dependency>
-        <!-- test dependencies -->
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-open-sc-implementation</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -47,11 +60,6 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-iidm-impl</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-config-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -64,22 +72,11 @@
             <artifactId>log4j-over-slf4j</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>test-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>
