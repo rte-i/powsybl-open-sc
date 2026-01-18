@@ -1,0 +1,12 @@
+{
+  "test_id": "TEST_SINGLE",
+  "iec_section": "1.0",
+  "fault_type": "LLL",
+  "bus_id": "B1",
+  "expected": {
+    "ik_ka": 10.0
+  },
+  "tolerance_percent": 1.0,
+  "source_reference": "Test source",
+  "notes": "Test note"
+}

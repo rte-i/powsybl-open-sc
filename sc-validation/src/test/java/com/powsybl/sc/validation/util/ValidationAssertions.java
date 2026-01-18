@@ -83,17 +83,36 @@ public final class ValidationAssertions {
      * Calculates the percentage deviation between actual and expected values.
      * Formula: |actual - expected| / |expected| * 100
      *
-     * Edge case: If expected is zero (or very close to zero), uses absolute comparison.
+     * Edge cases:
+     * - If both actual and expected are zero (or very close), returns 0.0
+     * - If expected is zero but actual is non-zero, throws IllegalArgumentException
+     *   (zero expected values are invalid for short-circuit current comparisons)
+     * - If actual or expected is NaN or Infinite, throws IllegalArgumentException
      *
      * @param actual the actual value
      * @param expected the expected value
      * @return deviation as a percentage
+     * @throws IllegalArgumentException if expected is zero and actual is non-zero,
+     *         or if either value is NaN or Infinite
      */
     static double calculateDeviationPercent(double actual, double expected) {
+        // Check for NaN or Infinity
+        if (Double.isNaN(actual) || Double.isNaN(expected)) {
+            throw new IllegalArgumentException("Cannot calculate deviation with NaN values");
+        }
+        if (Double.isInfinite(actual) || Double.isInfinite(expected)) {
+            throw new IllegalArgumentException("Cannot calculate deviation with Infinite values");
+        }
+
         if (Math.abs(expected) < ZERO_EPSILON) {
-            // Edge case: expected is zero, use absolute difference
-            // Return as percentage assuming a small reference scale
-            return Math.abs(actual) < ZERO_EPSILON ? 0.0 : Double.MAX_VALUE;
+            // If both are zero, deviation is 0%
+            if (Math.abs(actual) < ZERO_EPSILON) {
+                return 0.0;
+            }
+            // Expected is zero but actual is non-zero - this is an invalid test case
+            throw new IllegalArgumentException(
+                    "Expected value is zero but actual is " + actual +
+                    ". Zero expected values are invalid for short-circuit current comparisons.");
         }
         return Math.abs(actual - expected) / Math.abs(expected) * 100.0;
     }

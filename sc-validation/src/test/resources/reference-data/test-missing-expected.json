@@ -1,0 +1,10 @@
+[
+  {
+    "test_id": "TEST_MISSING_EXPECTED",
+    "iec_section": "1.0",
+    "fault_type": "LLL",
+    "bus_id": "B1",
+    "tolerance_percent": 1.0,
+    "source_reference": "Test source"
+  }
+]

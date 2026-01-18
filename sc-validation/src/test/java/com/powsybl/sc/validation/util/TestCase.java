@@ -39,10 +39,13 @@ public class TestCase {
             @JsonProperty("source_reference") String sourceReference,
             @JsonProperty("notes") String notes) {
         this.testId = Objects.requireNonNull(testId, "test_id must not be null");
+        if (expected == null) {
+            throw new IllegalArgumentException("'expected' must not be null for test case: " + testId);
+        }
         this.iecSection = iecSection;
         this.faultType = faultType;
         this.busId = busId;
-        this.expectedIkKa = expected != null ? expected.getIkKa() : 0.0;
+        this.expectedIkKa = expected.getIkKa();
         this.tolerancePercent = tolerancePercent;
         this.sourceReference = sourceReference;
         this.notes = notes;
