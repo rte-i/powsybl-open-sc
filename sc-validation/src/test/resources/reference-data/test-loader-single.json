@@ -1,0 +1,12 @@
+{
+  "test_id": "SINGLE_TEST",
+  "iec_section": "3.1",
+  "fault_type": "LLL",
+  "bus_id": "B1",
+  "expected": {
+    "ik_ka": 25.0
+  },
+  "tolerance_percent": 1.5,
+  "source_reference": "Test Reference",
+  "notes": "Single test case for loader test"
+}

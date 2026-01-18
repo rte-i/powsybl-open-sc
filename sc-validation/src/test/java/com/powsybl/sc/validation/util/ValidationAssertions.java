@@ -83,17 +83,30 @@ public final class ValidationAssertions {
      * Calculates the percentage deviation between actual and expected values.
      * Formula: |actual - expected| / |expected| * 100
      *
-     * Edge case: If expected is zero (or very close to zero), uses absolute comparison.
-     *
      * @param actual the actual value
      * @param expected the expected value
      * @return deviation as a percentage
+     * @throws IllegalArgumentException if actual or expected is NaN or Infinite,
+     *                                  or if expected is zero and actual is non-zero
      */
     static double calculateDeviationPercent(double actual, double expected) {
+        // Validate inputs for NaN and Infinity
+        if (Double.isNaN(actual) || Double.isNaN(expected)) {
+            throw new IllegalArgumentException("NaN values are not allowed: actual=" + actual + ", expected=" + expected);
+        }
+        if (Double.isInfinite(actual) || Double.isInfinite(expected)) {
+            throw new IllegalArgumentException("Infinite values are not allowed: actual=" + actual + ", expected=" + expected);
+        }
+
         if (Math.abs(expected) < ZERO_EPSILON) {
-            // Edge case: expected is zero, use absolute difference
-            // Return as percentage assuming a small reference scale
-            return Math.abs(actual) < ZERO_EPSILON ? 0.0 : Double.MAX_VALUE;
+            // Both zero (or very close to zero) - no deviation
+            if (Math.abs(actual) < ZERO_EPSILON) {
+                return 0.0;
+            }
+            // Expected is zero but actual is non-zero - invalid for short-circuit comparisons
+            throw new IllegalArgumentException(
+                    "Expected value is zero but actual is non-zero (" + actual + "). " +
+                    "Zero expected values are invalid for short-circuit current comparisons.");
         }
         return Math.abs(actual - expected) / Math.abs(expected) * 100.0;
     }
