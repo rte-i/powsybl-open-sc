@@ -22,12 +22,20 @@ import java.util.Objects;
  * Utility class for loading test cases from JSON reference data files.
  * Parses JSON files from the classpath (typically src/test/resources/reference-data/).
  *
+ * <p>This class is thread-safe. The shared ObjectMapper instance is configured once
+ * at class load time and is only used for read operations (deserialization), which
+ * are thread-safe per Jackson documentation.</p>
+ *
  * @author GridMV Validation Team
  */
 public final class TestCaseLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestCaseLoader.class);
 
+    /**
+     * Shared ObjectMapper instance for JSON deserialization.
+     * Thread-safe for read operations after configuration is complete.
+     */
     private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
 
     private TestCaseLoader() {
