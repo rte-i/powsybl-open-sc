@@ -1,0 +1,38 @@
+[
+  {
+    "test_id": "IEC_60909_3.1_LG_B3",
+    "iec_section": "3.1",
+    "fault_type": "LG",
+    "bus_id": "B3",
+    "expected": {
+      "ik_ka": 35.70
+    },
+    "tolerance_percent": 1.0,
+    "source_reference": "IEC 60909:2016 Section 3.1",
+    "notes": "Single-phase-to-ground fault at B3. Expected I\"k = 35.70435548244156 kA from ShortCircuitMonophasedTest. C-factor cmax=1.0 (low voltage). Dyn transformer provides ground path."
+  },
+  {
+    "test_id": "IEC_60909_3.1_LL_B3",
+    "iec_section": "3.1",
+    "fault_type": "LL",
+    "bus_id": "B3",
+    "expected": {
+      "ik_ka": 67.52
+    },
+    "tolerance_percent": 1.0,
+    "source_reference": "IEC 60909:2016 Section 3.1",
+    "notes": "Phase-to-phase fault at B3. Expected I\"k = 67.51864695211795 kA from ShortCircuitBiphasedTest. C-factor not applied (cmax=1.0). Balanced geometry assumption Z1=Z2. I_LL = sqrt(3)/2 * I_LLL for balanced systems."
+  },
+  {
+    "test_id": "IEC_60909_3.1_LLG_B3",
+    "iec_section": "3.1",
+    "fault_type": "LLG",
+    "bus_id": "B3",
+    "expected": {
+      "ik_ka": 52.37
+    },
+    "tolerance_percent": 1.0,
+    "source_reference": "IEC 60909:2016 Section 3.1",
+    "notes": "Double-phase-to-ground fault at B3. Expected I\"k = 52.3687065865033 kA from ShortCircuitBiphasedGroundTest. C-factor not applied (cmax=1.0). Balanced geometry assumption Z1=Z2. All three sequence networks (Z0, Z1, Z2) connected in parallel at fault point."
+  }
+]
