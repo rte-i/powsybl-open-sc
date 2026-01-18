@@ -99,4 +99,40 @@ class TestCaseLoaderTest {
         assertEquals("IEC 60909:2016 Table 3.2", second.getSourceReference());
         assertEquals("Single-phase to ground fault at bus B5", second.getNotes());
     }
+
+    @Test
+    void testFindTestCaseSuccess() {
+        List<TestCase> testCases = TestCaseLoader.loadTestCases("reference-data/iec60909-sample.json");
+
+        TestCase found = TestCaseLoader.findTestCase(testCases, "IEC_60909_3.2_LG_B5");
+
+        assertNotNull(found);
+        assertEquals("IEC_60909_3.2_LG_B5", found.getTestId());
+        assertEquals("LG", found.getFaultType());
+        assertEquals("B5", found.getBusId());
+    }
+
+    @Test
+    void testFindTestCaseNullListThrows() {
+        assertThrows(NullPointerException.class, () ->
+            TestCaseLoader.findTestCase(null, "TEST_ID"));
+    }
+
+    @Test
+    void testFindTestCaseNullIdThrows() {
+        List<TestCase> testCases = TestCaseLoader.loadTestCases("reference-data/iec60909-sample.json");
+
+        assertThrows(NullPointerException.class, () ->
+            TestCaseLoader.findTestCase(testCases, null));
+    }
+
+    @Test
+    void testFindTestCaseNotFoundThrows() {
+        List<TestCase> testCases = TestCaseLoader.loadTestCases("reference-data/iec60909-sample.json");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+            TestCaseLoader.findTestCase(testCases, "NONEXISTENT_ID"));
+        assertTrue(ex.getMessage().contains("Test case not found"));
+        assertTrue(ex.getMessage().contains("NONEXISTENT_ID"));
+    }
 }
