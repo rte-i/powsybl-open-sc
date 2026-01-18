@@ -19,6 +19,7 @@ import com.powsybl.sc.validation.util.TestCase;
 import com.powsybl.sc.validation.util.TestCaseLoader;
 import com.powsybl.sc.validation.util.ValidationAssertions;
 import com.powsybl.sc.validation.util.ValidationResult;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.List;
@@ -42,8 +43,18 @@ abstract class AbstractSection31Test {
 
     protected static final String REFERENCE_DATA_PATH = "reference-data/iec60909-section-3.1.json";
 
+    // Cached test cases - loaded once per test class hierarchy
+    private static List<TestCase> cachedTestCases;
+
     protected MatrixFactory matrixFactory;
     protected LoadFlowParameters loadFlowParameters;
+
+    @BeforeAll
+    static void setUpTestCases() {
+        if (cachedTestCases == null) {
+            cachedTestCases = TestCaseLoader.loadTestCases(REFERENCE_DATA_PATH);
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -60,8 +71,7 @@ abstract class AbstractSection31Test {
      * @return the validation result
      */
     protected ValidationResult runFaultTest(String testCaseId, ShortCircuitFault.ShortCircuitType faultType) {
-        List<TestCase> testCases = TestCaseLoader.loadTestCases(REFERENCE_DATA_PATH);
-        TestCase testCase = TestCaseLoader.findTestCase(testCases, testCaseId);
+        TestCase testCase = TestCaseLoader.findTestCase(cachedTestCases, testCaseId);
 
         Network network = Iec60909Networks.createSection31Network();
 
