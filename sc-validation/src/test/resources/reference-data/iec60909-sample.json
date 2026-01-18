@@ -1,0 +1,26 @@
+[
+  {
+    "test_id": "IEC_60909_3.1_LLL_B3",
+    "iec_section": "3.1",
+    "fault_type": "LLL",
+    "bus_id": "B3",
+    "expected": {
+      "ik_ka": 34.62
+    },
+    "tolerance_percent": 1.0,
+    "source_reference": "IEC 60909:2016 Table 3.1",
+    "notes": "Three-phase fault at bus B3"
+  },
+  {
+    "test_id": "IEC_60909_3.2_LG_B5",
+    "iec_section": "3.2",
+    "fault_type": "LG",
+    "bus_id": "B5",
+    "expected": {
+      "ik_ka": 12.50
+    },
+    "tolerance_percent": 1.0,
+    "source_reference": "IEC 60909:2016 Table 3.2",
+    "notes": "Single-phase to ground fault at bus B5"
+  }
+]
