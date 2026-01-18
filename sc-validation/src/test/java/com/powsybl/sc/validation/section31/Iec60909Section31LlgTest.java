@@ -74,7 +74,7 @@ class Iec60909Section31LlgTest {
     @Test
     void testB3IkLlg() {
         List<TestCase> testCases = TestCaseLoader.loadTestCases(REFERENCE_DATA_PATH);
-        TestCase testCase = findTestCase(testCases, "IEC_60909_3.1_LLG_B3");
+        TestCase testCase = TestCaseLoader.findTestCase(testCases, "IEC_60909_3.1_LLG_B3");
 
         LOGGER.info("Running LLG fault test: {} at bus {}", testCase.getTestId(), testCase.getBusId());
 
@@ -120,12 +120,5 @@ class Iec60909Section31LlgTest {
         );
 
         assertTrue(result.isPassed(), result.toString());
-    }
-
-    private TestCase findTestCase(List<TestCase> testCases, String testId) {
-        return testCases.stream()
-                .filter(tc -> tc.getTestId().equals(testId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Test case not found: " + testId));
     }
 }

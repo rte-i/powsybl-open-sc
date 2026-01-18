@@ -70,6 +70,24 @@ public final class TestCaseLoader {
     }
 
     /**
+     * Finds a test case by its test ID from a list of test cases.
+     *
+     * @param testCases the list of test cases to search
+     * @param testId the unique identifier of the test case to find
+     * @return the matching TestCase
+     * @throws IllegalArgumentException if testCases or testId is null, or if the test case is not found
+     */
+    public static TestCase findTestCase(List<TestCase> testCases, String testId) {
+        Objects.requireNonNull(testCases, "testCases must not be null");
+        Objects.requireNonNull(testId, "testId must not be null");
+
+        return testCases.stream()
+                .filter(tc -> tc.getTestId().equals(testId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Test case not found: " + testId));
+    }
+
+    /**
      * Loads a single test case from a JSON resource file.
      * Useful when the JSON file contains a single test case object rather than an array.
      *
