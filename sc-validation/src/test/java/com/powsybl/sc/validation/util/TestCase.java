@@ -17,7 +17,7 @@ import java.util.Objects;
  *
  * @author GridMV Validation Team
  */
-public class TestCase {
+public final class TestCase {
 
     private final String testId;
     private final String iecSection;
@@ -54,7 +54,7 @@ public class TestCase {
     /**
      * Nested class for the "expected" object in JSON.
      */
-    public static class ExpectedValues {
+    private static class ExpectedValues {
         private final double ikKa;
 
         @JsonCreator
