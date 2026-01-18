@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>This test class validates three-phase balanced short-circuit calculations against
  * IEC 60909:2016 Section 3.1 reference values. The LLL fault is the most common type
  * of fault calculation as it produces the highest symmetrical fault currents.</p>
+ *
+ * <p>Note: This class does not extend AbstractSection31Test because LLL (three-phase
+ * symmetrical) faults use ShortCircuitBalancedEngine, whereas the unbalanced fault types
+ * (LG, LL, LLG) in AbstractSection31Test use ShortCircuitUnbalancedEngine.</p>
  *
  * <p>Reference: IEC 60909:2016, Section 3.1</p>
  *
@@ -71,14 +74,13 @@ class Iec60909Section31LllTest {
         Network network = Iec60909Networks.createSection31Network();
 
         // Define fault at the specified bus
-        List<ShortCircuitFault> faultList = new ArrayList<>();
         ShortCircuitFault lllFault = new ShortCircuitFault(
             testCase.getBusId(),
             testCase.getTestId(),
             0.0, 0.0,
             ShortCircuitFault.ShortCircuitType.TRIPHASED_GROUND
         );
-        faultList.add(lllFault);
+        List<ShortCircuitFault> faultList = List.of(lllFault);
 
         // Configure engine parameters for IEC 60909 calculation
         ShortCircuitEngineParameters.PeriodType periodType =
